@@ -89,6 +89,10 @@ IDOL=example AVATAR=mock MODE=test node server/index.mjs
 
 ## 做你自己的主播
 
+可选的低成本本机方案：用 **Codex CLI** 生成回复，用 **Live2D** 绘制形象，再由 OBS 推流。
+两个模块独立启用，原有 OpenRouter / Vidu 配置仍可使用。安装、模型授权和配置见
+[本机 Codex 与 Live2D 接入](docs/local-providers.md)。
+
 1. `cp -r app/idols/example app/idols/<id>`，把里面 `config.mjs` 的 `id` 改成 `<id>`。
 2. 按本人的回答填 `profile.mjs`（她是谁、怎么说话、几句原话），再填 `config.mjs` 里的 `PLACES`（广场名字、X 账号、网站、直播时间）。
 3. 形象图放到 `app/public/art/<id>/looks/s1.jpg`（竖图、脸清楚、没有字）。

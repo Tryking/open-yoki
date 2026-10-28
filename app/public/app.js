@@ -4,6 +4,7 @@
 // all come from snapshot.idol.
 import { watchRoom } from './feed.js';
 import { t, lang, setLang, setVars, applyStatic } from './i18n.js';
+import { createLive2DView } from './live2d.js';
 
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -16,17 +17,46 @@ let token = localStorage.getItem(S + 'token'), me = null;
 // ---------- picture ----------
 const player = new Audio();
 const songPlayer = new Audio();   // a song she put on ([放歌]), quiet under her voice
+const capture = new URLSearchParams(location.search);
+document.body.classList.toggle('obs', capture.get('obs') === '1');
+document.body.classList.toggle('landscape', capture.get('landscape') === '1');
+const live2d = createLive2DView({
+  container: $('live2dView'), audio: player,
+  onReady: ready => {
+    $('still').hidden = ready || !stillOk;
+    $('placeholder').hidden = ready || stillOk;
+    if (ready) $('live2dError').hidden = true;
+  },
+  onError: error => {
+    console.warn('local avatar', error?.message || error);
+    if (room?.avatar?.kind === 'live2d' && !live2d.ready) {
+      $('live2dError').textContent = t('角色加载失败，暂用静态画面');
+      $('live2dError').hidden = false;
+    }
+  },
+});
 let hls = null, volc = null;
 const video = () => $('liveVideo');
 const liveShown = () => !video().hidden || !!volc?.up;
 // Her still picture is optional (public/art/<id>/looks/s1.jpg, added by whoever runs her); until it loads, or if it
 // is missing, a neutral placeholder stands in.
 let stillOk = false;
-$('still').onload = () => { stillOk = true; $('placeholder').hidden = true; if (!liveShown()) $('still').hidden = false; };
-$('still').onerror = () => { stillOk = false; $('still').hidden = true; $('placeholder').hidden = false; };
+$('still').onload = () => { stillOk = true; $('placeholder').hidden = true; if (!liveShown() && !live2d.ready) $('still').hidden = false; };
+$('still').onerror = () => { stillOk = false; $('still').hidden = true; $('placeholder').hidden = live2d.ready; };
 function setView(view) {
   const img = $('still');
   if (view?.src && img.getAttribute('src') !== view.src) { stillOk = false; img.src = view.src; }
+  if (view?.kind === 'live2d') {
+    stopVolc(); stopLive(); $('rtc').hidden = true;
+    $('live2dCredit').textContent = view.live2d?.credit || '';
+    $('live2dCredit').hidden = !view.live2d?.credit;
+    img.hidden = live2d.ready || !stillOk;
+    $('placeholder').hidden = live2d.ready || stillOk;
+    live2d.setView(view);
+    if (sound) live2d.resumeAudio().catch(error => console.warn('avatar audio', error?.message || error));
+    return;
+  }
+  live2d.setView(null); $('live2dError').hidden = true; $('live2dCredit').hidden = true;
   if (view?.kind === 'volc') { stopLive(); playVolc(view); img.hidden = !!volc?.up; $('rtc').hidden = !!volc?.up; return; }
   stopVolc();
   if (view?.kind === 'hls') { playLive(view.src); img.hidden = true; $('rtc').hidden = true; return; }
@@ -127,6 +157,7 @@ function paintLine(line, fresh) {
   $('replyTo').innerHTML = asked ? t('回复 <b>{who}</b>：{text}', { who: esc(asked.who), text: esc(asked.request ? t('点了「{a}」', { a: t(asked.request) }) : asked.text) })
     : seen ? t(seen.who ? '刷到{src} <b>{who}</b>：{text}' : '刷到{src}：{text}', { src: t(seen.src), who: esc(seen.who), text: esc(seen.text) }) : '';
   if (!fresh) { el.textContent = text; return; }
+  live2d.perform(line);
   if (line.action) showMove(line.action);
   const total = line.durationMs || Math.max(2000, text.length * 120);
   const step = Math.min(70, Math.max(25, total * 0.8 / Math.max(1, text.length)));
@@ -298,6 +329,7 @@ $('goBtn').onclick = () => {
 
 function setSound(on) {
   sound = on;
+  if (on && room?.avatar?.kind === 'live2d') live2d.resumeAudio().catch(error => console.warn('avatar audio', error?.message || error));
   if (!on) songPlayer.pause();
   $('soundBtn').dataset.i18n = on ? '关声音' : '开声音';
   $('soundBtn').textContent = t($('soundBtn').dataset.i18n);
@@ -319,3 +351,4 @@ $('langBtn').onclick = () => {
 applyStatic();
 showLang();
 refreshMe();
+window.addEventListener('pagehide', event => { if (!event.persisted) live2d.destroy(); player.pause(); songPlayer.pause(); });

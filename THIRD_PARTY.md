@@ -12,3 +12,10 @@ The MIT license in `LICENSE` covers the code written for this package. These bun
 
 npm packages (`app/package.json`) are installed at setup time, not shipped.
 The folders under `tools/` list their own outside tools and models in their READMEs.
+
+Optional Live2D assets are installed by the operator, not bundled or relicensed by this project.
+`app/tools/setup-live2d.mjs` downloads pinned PixiJS (MIT) and pixi-live2d-display (MIT) bundles with their license files.
+The Cubism Framework included in that display bundle and the operator-supplied Cubism Core are also subject to
+[Live2D SDK licensing](https://www.live2d.com/en/sdk/license/).
+Character models, textures, motions and expressions require their own permission. The optional runtime and model
+directories are Git-ignored; see [local provider setup](docs/local-providers.md).

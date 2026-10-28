@@ -27,6 +27,7 @@ const EN = {
   '每晚下播后她自己写一篇。': 'She writes one herself after every show.',
   '直播画面': 'Live picture',
   '画面接入中…': 'Connecting the picture…',
+  '角色加载失败，暂用静态画面': 'The avatar could not load. Showing the still picture.',
   '她还没上线': "She's not on yet",
   '下次开播': 'Next show',
   '每晚 {from}–{to}（你的当地时间），币安广场和这里同时开。': 'Every night {from}–{to} your time, on Binance Square and here at the same time.',
