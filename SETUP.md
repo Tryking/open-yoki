@@ -318,7 +318,7 @@ cd <包> && LIVEHOST_SSH=root@<服务器IP> bash deploy/ship.sh 20261027a
 
 ```
 <包>/
-  README.md / README.zh.md   介绍
+  README.md / README.en.md   介绍（中文 / English）
   SETUP.md                   本说明
   .env.example               全部设置项和说明（install.sh 复制成 /etc/livehost/livehost.env）
   app/                       主程序（Node.js）
