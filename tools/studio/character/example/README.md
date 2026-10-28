@@ -1,19 +1,15 @@
-# Example character: Mika (fictional)
+# 示例角色：Mika（虚构）
 
-This folder holds only `character.json`. No photos or recordings ship with the package. Add your own:
+这个文件夹只有 `character.json`。包里不带任何照片和录音。你自己放进来：
 
-| File | What to put there |
+| 文件 | 放什么 |
 | --- | --- |
-| `face.png` | **Master face.** One sharp, front-facing close-up (at least 1024 px), even light, neutral or soft smile, no hands near the face. Every generation puts it first; every face check compares against it. |
-| `body.png` | Same person, same outfit, standing, head to shoes, plain background. Dance tools crop it to head-to-knees. |
-| `sides/side-left.png`, `side-right.png` | Two 3/4 side views made **from the master face** (`look/look.mjs sides`). Check them side by side with the face before using. |
-| `looks/<name>.png` | One single photo per look (makeup, hair, outfit, mood). Make 2–3 candidates with `look/look.mjs explore`, pick one. |
-| `live/frame.png` | (Optional) a screenshot of your live-stream picture, for clips that cut out of and back into the stream. |
-| `voice/speaking-ref.wav` | (Optional) 10–30 s of clean speech by the voice you will use, as the target for singing voice conversion. |
-| `calib.bad` / `calib.good` | Face crops a human judged "drifted / ugly" and "fine". Copy them from `out/check/<clip>/face*.jpg` after your first runs. Two or more each. |
+| `face.png` | **主脸。** 一张清楚的正脸近照（至少 1024 像素），光线均匀，表情平静或者微微笑，手不要靠近脸。每次生成都把它放在第一张；每次验脸都拿它来比。 |
+| `body.png` | 同一个人、同一套衣服，站着，从头到鞋，背景干净。跳舞工具会把它裁成头到膝盖。 |
+| `sides/side-left.png`, `side-right.png` | **用主脸**做出来的两张 3/4 侧脸（`look/look.mjs sides`）。用之前先和主脸并排检查。 |
+| `looks/<name>.png` | 每套造型一张单人照（妆容、发型、衣服、气质）。用 `look/look.mjs explore` 做 2–3 张候选，挑一张。 |
+| `live/frame.png` | （可选）一张你直播画面的截图，用于从直播里切出去、再切回直播的片段。 |
+| `voice/speaking-ref.wav` | （可选）10–30 秒干净的说话录音，用你要用的那个声音录，作为唱歌换声的目标。 |
+| `calib.bad` / `calib.good` | 人判过“走样 / 难看”和“没问题”的脸部截图。前几次出片后，从 `out/check/<clip>/face*.jpg` 复制过来。每种至少两张。 |
 
-Only use photos and voices you own or have permission to use.
-
-## 中文
-
-这个文件夹只有 `character.json`，不带任何照片和录音。自己放：主脸（正脸近照，1024 像素以上，所有生成都把它放第一张、验脸也以它为准）、站姿全身照、两张从主脸做出来的 3/4 侧脸、每套造型一张单人照、（可选）直播画面截图和 10–30 秒干净说话录音。`calib` 放人眼判过的“走样 / 合格”脸部截图，各 2 张起，第一次出片后从 `out/check/` 里挑。只用自己有权使用的照片和声音。
+只用你自己的、或者你有权使用的照片和声音。

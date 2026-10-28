@@ -1,23 +1,19 @@
-# check/ — did the face drift, does the clip match its card, is the film ready
+# check/：脸漂了没有、片段和镜头卡对不对得上、成片能不能发
 
-| Command | What | Cost |
+| 命令 | 做什么 | 花费 |
 | --- | --- | --- |
-| `face.mjs <char> <video\|image>` | Crops the face from 6 frames, enlarges it, puts it **next to the master face** (`compare_master_left.jpg`), and scores "same person" and "attractive" against your human-judged `calib` examples | ~$0.01 (OpenRouter) |
-| `face.mjs <char> <file> --offline` | Only the side-by-side (centre crop, or `--box t,b,l,r`) | free |
-| `clip.mjs check <clip> <cards.json> --shot N` | Each check on the shot card → pass/fail + which seconds are usable | ~$0.004 |
-| `clip.mjs cut <film> --goal "..."` | Before publishing: export (MP4/H.264/AAC, size, bitrate, orientation), loudness, peaks, clicks at start/end, black frames — measured; story, cuts, continuity, captions, ending — model | ~$0.01 |
-| `clip.mjs cut <film> --offline` | Only the measured part | free |
+| `face.mjs <char> <video\|image>` | 从 6 帧里把脸裁出来放大，**和主脸并排**（`compare_master_left.jpg`），再拿你人判过的 `calib` 样例当标尺，给“是不是同一个人”和“好不好看”打分 | 约 $0.01（OpenRouter） |
+| `face.mjs <char> <file> --offline` | 只出并排图（裁中间，或者用 `--box t,b,l,r` 指定） | 免费 |
+| `clip.mjs check <clip> <cards.json> --shot N` | 镜头卡上的每一条检查 → 过 / 不过 + 哪几秒能用 | 约 $0.004 |
+| `clip.mjs cut <film> --goal "..."` | 发布前检查：导出参数（MP4/H.264/AAC、尺寸、码率、横竖）、响度、峰值、开头结尾的爆音、黑帧，这些靠测量；故事、切点、连贯、字幕、结尾，这些交给模型看 | 约 $0.01 |
+| `clip.mjs cut <film> --offline` | 只做测量的部分 | 免费 |
 
-## Why the face check works this way
+## 为什么验脸要这样做
 
-- Looking at whole frames, a model says "far away, hard to tell, looks consistent" and gives 8/10 to faces people called ugly. Cropping and enlarging the face helps, but scores still bunch at 7–8.
-- Adding examples a human already judged ("drifted" vs "fine") and asking **which group is each crop closer to** is what separates good from bad clips. Add 2+ of each to `calib` after your first runs.
-- In our runs this ranked three reference videos the same way people did (full-body motion transfer: fail; slightly tighter crop: fail; head-to-knees multi-reference: pass 6/6).
-- **The human decides.** Open `compare_master_left.jpg` and compare eye size and shape, bangs, nose, lips, face shape. Faces under ~120 px in the frame are flagged: frame tighter.
-- Most drift starts in the first still (warm backlight, wide laugh). Check stills before paying for video.
+- 看整帧时，模型会说“离得远，看不太清，看起来一致”，给人觉得难看的脸打 8/10。把脸裁出来放大有帮助，但分数还是挤在 7–8。
+- 加上人已经判过的样例（“走样”和“没问题”），问模型**每张截图更接近哪一组**，这样才把好片和坏片分开。前几次出片后，往 `calib` 里每种各放 2 张以上。
+- 我们实测时，它给三段参考视频排的顺序和人排的一样（全身动作迁移：不过；框得稍紧一点：不过；头到膝盖 + 多参考：6/6 通过）。
+- **人来定。** 打开 `compare_master_left.jpg`，比一比眼睛大小和形状、刘海、鼻子、嘴唇、脸型。画面里脸小于约 120 像素的会被标出来：说明要框紧一点。
+- 大多数走样从第一张静帧就开始了（暖色逆光、咧嘴大笑）。花钱出视频之前，先查静帧。
 
-Optional extra ear: [earshot](https://github.com/Leonxlnx/earshot) (MIT) runs locally and can describe sounds, find a sound in a long recording and critique a promo mix with time stamps.
-
-## 中文
-
-验脸：抽 6 帧、把脸裁出来放大、和主脸并排出一张对比图，再拿你人眼判过的“走样/合格”样例当标尺打分；模型打分只是辅助，过不过以人看对比图为准；`--offline` 只出对比图不花钱。按卡验片：每段片子逐条对卡上的验收项，给出能用的那几秒。成片检查：导出参数、响度、峰值、开头结尾爆音、黑场用 ffmpeg 量（一定准），故事、切点、连续性、字幕、结尾让模型看帧判；`--offline` 只做量的部分。
+可选的“耳朵”：[earshot](https://github.com/Leonxlnx/earshot)（MIT）在本机跑，能描述声音、在长录音里找出某个声音，还能带时间点点评宣传片的混音。

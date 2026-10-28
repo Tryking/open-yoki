@@ -1,24 +1,20 @@
-# look/ — test shots, turnaround sheets, outfit swaps
+# look/：试妆照、三视图、换装
 
-`look.mjs` turns the master face into looks. Every call is an **edit of the master face** (fal `nano-banana-pro/edit`, master face always first), so the face stays the same person.
+`look.mjs` 用主脸做出各种造型。每次调用都是**在主脸上编辑**（fal `nano-banana-pro/edit`，主脸永远放第一张），所以脸还是同一个人。
 
-| Command | What it does | Cost / time |
+| 命令 | 做什么 | 花费 / 时间 |
 | --- | --- | --- |
-| `explore <char> "<direction>" [--n 3]` | 2–3 candidate single photos for a new look | ~$0.15 / image, ~1 min |
-| `sheet <char> <look>` | Turnaround: face close-up, full body front, 3/4, side | ~$0.15, ~1 min |
-| `outfit <char> <look> "<clothes>" [--image clothes.png]` | Change only the clothes; face, hair, hat stay | ~$0.15 / image |
-| `style <char> <key> [--styles pack.json]` | One style from a style pack (`styles.example.json`): new hair + outfit + mood, same face, fixed framing | ~$0.15 |
-| `sides <char>` | Two 3/4 side faces from the master face (for face binding in dance) | ~$0.30 |
-| `status <char>` | List looks and outputs | free |
+| `explore <char> "<direction>" [--n 3]` | 给新造型出 2–3 张候选单人照 | 约 $0.15 / 张，约 1 分钟 |
+| `sheet <char> <look>` | 三视图：脸部特写、全身正面、3/4、侧面 | 约 $0.15，约 1 分钟 |
+| `outfit <char> <look> "<clothes>" [--image clothes.png]` | 只换衣服；脸、头发、帽子不变 | 约 $0.15 / 张 |
+| `style <char> <key> [--styles pack.json]` | 用风格包（`styles.example.json`）里的一种风格：新发型 + 新衣服 + 新气质，脸不变，取景固定 | 约 $0.15 |
+| `sides <char>` | 用主脸做两张 3/4 侧脸（跳舞绑脸用） | 约 $0.30 |
+| `status <char>` | 列出已有的造型和输出 | 免费 |
 
-Add `--dry-run` to see the exact prompt, reference order and cost without spending anything. Output goes to `<char>/out/{explore,sheets,outfits,styles,sides}/`; spend estimates are appended to `<char>/out/spend.jsonl`.
+加 `--dry-run` 可以看准确的提示词、参考图顺序和花费，不花钱。输出放在 `<char>/out/{explore,sheets,outfits,styles,sides}/`；估算的花费追加到 `<char>/out/spend.jsonl`。
 
-Lessons that are baked in:
-- Reference order is always master face → look photo → body. Put the face anywhere else and it drifts.
-- Write the face in English in `identity` (eyes, eyelids, bangs, nose, lips, face shape). Mood words ("cute", "cool") belong in `vibe`, not in the face line.
-- Warm backlight and a big open-mouth laugh both make the face rounder. Check every still next to the master face (`check/face.mjs --offline`) **before** you pay for video from it.
-- Keep the framing fixed across a style pack, so a week of styles still looks like one show.
-
-## 中文
-
-`look.mjs` 用主脸出造型：探方向（`explore`）、定妆照（`sheet`）、只换衣服（`outfit`）、按风格包换整套风格（`style`）、从主脸做两张 3/4 侧脸（`sides`）。每次都是“编辑主脸”，主脸永远第一张参考图。加 `--dry-run` 只打印提示词、参考图顺序和花费，不花钱。经验：暖色逆光和露牙大笑会把脸画圆；每张静帧先和主脸并排看过再拿去出视频。
+已经做进工具里的经验：
+- 参考图顺序永远是主脸 → 造型照 → 全身照。主脸放在别的位置，脸就会漂。
+- 在 `identity` 里用英文写这张脸（眼睛、眼皮、刘海、鼻子、嘴唇、脸型）。气质词（“cute”“cool”）写在 `vibe` 里，不要写进描述脸的那句。
+- 暖色逆光和张大嘴大笑都会把脸画圆。拿一张静帧去出视频**之前**，先把它和主脸并排检查（`check/face.mjs --offline`）。
+- 同一个风格包里取景保持固定，这样一周换着不同风格，看起来还是同一档节目。

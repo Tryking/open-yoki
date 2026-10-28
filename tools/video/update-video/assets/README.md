@@ -1,16 +1,15 @@
-# assets / 素材目录
+# 素材目录
 
-Nothing here is shipped: put your own files in these folders (or point `--assets` / `"assets_dir"` somewhere else).
-Paths in the storyboard are relative to this folder. 这里不附带任何文件，自己放进来；storyboard 里的路径相对这个目录。
+这里不附带任何文件：把你自己的文件放进这些文件夹（或者用 `--assets` / `"assets_dir"` 指到别的地方）。
+分镜里写的路径都相对这个目录。
 
-| folder | what goes in | example name in `storyboard.example.json` |
+| 文件夹 | 放什么 | `storyboard.example.json` 里的示例文件名 |
 |---|---|---|
-| `clips/` | pieces of the live replay (any size; vertical clips get a blurred fill) 回放片段 | `before.mp4`, `after.mp4` |
-| `images/` | screenshots, the host's avatar 截图、头像 | `screenshot.png`, `avatar.png` |
-| `music/` | background music, one track per section 配乐 (mp3/wav/m4a) | `intro.mp3`, `sad.mp3`, `upbeat.mp3`, `bright.mp3` |
-| `sfx/` | short sound effects 音效 (wav/mp3/ogg) | `click.wav`, `confirm.wav`, `error.wav`, `boom.wav`, `whoosh.wav` |
-| `voice/` | voice-over lines, e.g. from your TTS 配音 | `line1.wav` |
+| `clips/` | 直播回放的片段（尺寸不限；竖屏片段两边会用模糊画面填满） | `before.mp4`, `after.mp4` |
+| `images/` | 截图、主播头像 | `screenshot.png`, `avatar.png` |
+| `music/` | 背景音乐，每段一首（mp3/wav/m4a） | `intro.mp3`, `sad.mp3`, `upbeat.mp3`, `bright.mp3` |
+| `sfx/` | 短音效（wav/mp3/ogg） | `click.wav`, `confirm.wav`, `error.wav`, `boom.wav`, `whoosh.wav` |
+| `voice/` | 配音，比如用你的语音合成做的 | `line1.wav` |
 
-Free sound effects: Kenney's audio packs (kenney.nl, CC0) or freesound.org (check each file's license).
-Music: use tracks you have the rights to. A missing music or sfx file is skipped with a warning, so you can render
-before you have picked any. 缺配乐或音效只会警告并跳过，可以先出片看画面。
+免费音效：Kenney 的音效包（kenney.nl，CC0）或 freesound.org（每个文件的许可要自己看）。
+音乐：用你有权使用的曲子。缺配乐或音效文件只会警告并跳过，所以还没挑好也能先出片看画面。

@@ -1,41 +1,37 @@
-# sing/ — your character singing
+# sing/：让你的角色唱歌
 
-Main route is **local and free**: take a real recording of the song, split off the vocal, convert the singer's timbre into your character's voice with Seed-VC, mix it back over the original backing track. Melody, rhythm and diction come from the original singer, so it stays in tune.
+主路线**在本机跑、免费**：拿一首歌的真实录音，把人声拆出来，用 Seed-VC 把原唱的音色换成你角色的声音，再混回原来的伴奏上。旋律、节奏和咬字都来自原唱，所以不会跑调。
 
 ```bash
-bash tools/studio/sing/setup.sh                                  # once: Seed-VC + demucs in ~/seed-vc
-bash tools/studio/sing/separate.sh song.mp3 work/sing 66.5 92    # vocals.wav + no_vocals.wav for the chorus
-# target voice: 10-30 s of your character speaking (e.g. a TTS line: node tools/studio/mv/voice.mjs tts ...)
+bash tools/studio/sing/setup.sh                                  # 只跑一次：把 Seed-VC 和 demucs 装到 ~/seed-vc
+bash tools/studio/sing/separate.sh song.mp3 work/sing 66.5 92    # 拆出副歌这一段的 vocals.wav + no_vocals.wav
+# 目标声音：你角色 10-30 秒的说话录音（比如一句 TTS：node tools/studio/mv/voice.mjs tts ...）
 bash tools/studio/sing/svc.sh work/sing/vocals.wav voice/speaking-ref.wav work/sing/take1.wav 50 0.7 0
 python3 tools/studio/sing/mix.py --vocal work/sing/take1.wav --inst work/sing/no_vocals.wav --match work/sing/vocals.wav --out work/sing/take1.mp3
 ~/seed-vc/.venv/bin/python tools/studio/sing/score.py work/sing/vocals.wav voice/speaking-ref.wav work/sing/take*.wav
-node tools/studio/sing/judge.mjs --ref voice/speaking-ref.wav work/sing/take1.mp3 work/sing/take2.mp3   # optional blind listen
+node tools/studio/sing/judge.mjs --ref voice/speaking-ref.wav work/sing/take1.mp3 work/sing/take2.mp3   # 可选：盲听
 ```
 
-Make several takes (different `steps`, `cfg`, a semitone shift, different reference clips), score them, then listen to the top two yourself.
+多做几版（换不同的 `steps`、`cfg`，升降一个半音，换参考片段），打分，再自己听排前两名的。
 
-| Script | What | Cost |
+| 脚本 | 做什么 | 花费 |
 | --- | --- | --- |
-| `setup.sh` | Seed-VC + demucs into `$SEEDVC_DIR` (default `~/seed-vc`) | free, ~2 GB models |
-| `separate.sh` | demucs `htdemucs_ft` vocal / backing split, optional time range | free |
-| `svc.sh` | Seed-VC singing conversion (f0-conditioned, 44 kHz) | free, ~10 s per 25 s clip on Apple Silicon |
-| `rvc.sh` | RVC via Applio, if you trained a voice model | free |
-| `mix.py` | level-match, EQ, de-ess, light reverb, -14 LUFS / -1 dBTP | free (ffmpeg only) |
-| `score.py` | pitch accuracy vs the original + voice similarity to the target | free |
-| `matcheq.py` | match the long-term spectrum to the speaking reference (fixes thin / nasal) | free |
-| `judge.mjs` | blind audio-model ranking, shuffled each round | OpenRouter, cents |
-| `cloud.mjs` | fal: new song with your lyrics (MiniMax v2), cover over a reference melody, lyric swap (ACE-Step), Mureka, speech-to-speech | $0.01–0.15 per call |
+| `setup.sh` | 把 Seed-VC + demucs 装进 `$SEEDVC_DIR`（默认 `~/seed-vc`） | 免费，模型约 2 GB |
+| `separate.sh` | 用 demucs `htdemucs_ft` 拆开人声 / 伴奏，可以指定时间段 | 免费 |
+| `svc.sh` | Seed-VC 唱歌换声（带 f0 条件，44 kHz） | 免费，Apple Silicon 上 25 秒片段约 10 秒 |
+| `rvc.sh` | 通过 Applio 用 RVC，前提是你训练过声音模型 | 免费 |
+| `mix.py` | 对齐电平、EQ、去齿音、轻混响、-14 LUFS / -1 dBTP | 免费（只要 ffmpeg） |
+| `score.py` | 和原唱比音准 + 和目标声音比像不像 | 免费 |
+| `matcheq.py` | 把整体频谱对齐到说话参考（治声音发薄 / 发鼻） | 免费 |
+| `judge.mjs` | 让音频模型盲排名，每轮都打乱顺序 | OpenRouter，几美分 |
+| `cloud.mjs` | fal：用你的歌词写新歌（MiniMax v2）、按参考旋律翻唱、换歌词（ACE-Step）、Mureka、语音转语音换声（Chatterbox） | 每次 $0.01–0.15 |
 
-## What we measured
+## 我们实测的结果
 
-- Seed-VC on a 25 s chorus: pitch within 0.8 semitone of the original on ~91 % of voiced frames; blind audio-model score ~5.5/10 vs 7 for the original singer; voice similarity to the target ~0.6 (the same person speaking twice scores ~0.86–0.90). It sounds like "a singer who resembles your character", not like your character singing.
-- Fine-tuning Seed-VC or training RVC on **TTS speech** of the target voice did **not** beat the base model (blind scores 5.0 / 4.2 / 3.4 vs 5.3). To do better you need 5–10 minutes of the real person singing a cappella, trained locally.
-- Typical flaws: slightly thin or nasal tone (try `matcheq.py`), a little metallic sheen on long notes, and **backing vocals in the stem get converted too**. Mute ad-libs in `vocals.wav` before converting.
-- Speech-to-speech (`cloud.mjs sts`) plus pitch correction was less clear than Seed-VC for singing.
-- Mac notes: run with `PYTORCH_ENABLE_MPS_FALLBACK=1` (svc.sh does). If you hit a float64 error on MPS, cast the F0 tensor to float32 in Seed-VC's inference; if saving fails, write the output with `soundfile`.
+- Seed-VC 处理一段 25 秒的副歌：约 91% 的有声帧，音高和原唱相差在 0.8 个半音以内；音频模型盲评约 5.5/10，原唱是 7；和目标声音的相似度约 0.6（同一个人说两次话约 0.86–0.90）。听起来像“一个声音有点像你角色的歌手”，不像你的角色本人在唱。
+- 拿目标声音的 **TTS 语音**去微调 Seed-VC 或训练 RVC，**没有**超过底模（盲评 5.0 / 4.2 / 3.4，底模 5.3）。想更好，需要真人 5–10 分钟的无伴奏清唱，在本机训练。
+- 常见毛病：音色有点薄或者发鼻（试试 `matcheq.py`），长音上有一点金属感，还有**人声轨里的伴唱也会被一起换声**。换声前，先把 `vocals.wav` 里的即兴伴唱静音。
+- 唱歌时，语音转语音（`cloud.mjs sts`）加修音，效果没有 Seed-VC 清楚。
+- Mac 上要注意：用 `PYTORCH_ENABLE_MPS_FALLBACK=1` 跑（svc.sh 已经设好了）。如果在 MPS 上碰到 float64 报错，就在 Seed-VC 的推理代码里把 F0 张量转成 float32；如果保存失败，就用 `soundfile` 写出结果。
 
-Music rights: converting a commercial song is your responsibility. For anything public, check the license of the song and backing track.
-
-## 中文
-
-唱歌主路线在本机免费跑：原曲用 demucs 拆出人声和伴奏 → Seed-VC 把原唱的音色换成你角色的声音（旋律、节奏、咬字都跟原唱，所以不跑调）→ `mix.py` 对齐电平、EQ、去齿音、轻混响、响度 -14 LUFS → `score.py` 量音准和像不像 → 自己听前两名。实测：音准约 91% 帧在 0.8 个半音内，盲评约 5.5/10（原唱 7），声纹像目标声音约 0.6，听起来是“像她的歌手”，还不是“她在唱”；拿 TTS 语料微调 Seed-VC 或训练 RVC 都没超过底模，想更像要本人 5–10 分钟无伴奏清唱在本机训练。坑：伴唱也会被换声（先静音）、音色偏薄偏鼻（试 `matcheq.py`）。云端可选：fal 上 MiniMax 写歌/翻唱、ACE-Step 换词、Mureka、Chatterbox 换声。音乐版权自负。
+音乐版权：转换商业歌曲的责任在你。要公开发的东西，先查清楚歌和伴奏的授权。
