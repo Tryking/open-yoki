@@ -1,0 +1,8 @@
+{
+  "_comment": "Make the line first (or record it yourself): node tools/studio/mv/voice.mjs tts tools/studio/shots/jobs/line01.wav \"Hi, I'm Mika!\" --speaker <your voice>. Paths are relative to this file.",
+  "name": "example-lipsync",
+  "via": "libtv-omni",
+  "prompt": "She talks to the camera with small natural head movements and a friendly smile.",
+  "images": ["../../character/example/looks/daily.png"],
+  "audio": ["line01.wav"]
+}

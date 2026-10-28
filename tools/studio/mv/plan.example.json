@@ -1,0 +1,34 @@
+{
+  "_note": "Example plan for mv/finish.py: a 30-second short from the six shots in shots/storyboard.example.json. Paths assume you ran shots/gen.mjs with --out studio-out from the repo root and saved music/sfx under studio-out/audio/. Times are on the finished film's timeline.",
+  "size": [1920, 1080],
+  "fps": 30,
+  "speed": 1.0,
+  "out": "../../../studio-out/mika-first-stream.mp4",
+  "clips": [
+    { "file": "../../../studio-out/shots/01-lights-on/video.mp4", "from": 0.5, "to": 5.0 },
+    { "file": "../../../studio-out/shots/02-hello/video.mp4", "from": 0.0, "to": 5.0 },
+    { "file": "../../../studio-out/shots/03-chat/video.mp4", "from": 0.5, "to": 3.5 },
+    { "file": "../../../studio-out/shots/04-reaction/video.mp4", "from": 0.3, "to": 4.0 },
+    { "file": "../../../studio-out/shots/05-victory-dance/video.mp4", "from": 0.0, "to": 6.0 },
+    { "file": "../../../studio-out/shots/06-bye/video.mp4", "from": 0.0, "to": 6.0 }
+  ],
+  "subs": [
+    { "from": 4.6, "to": 7.4, "text": "Hi, I'm Mika." },
+    { "from": 7.4, "to": 9.5, "text": "This is my very first stream!" },
+    { "from": 26.5, "to": 29.5, "text": "See you tomorrow!" }
+  ],
+  "cards": [
+    { "from": 9.6, "to": 12.4, "text": "Viewers: 3 → 1,280", "sub": "first stream" }
+  ],
+  "label": "AI-generated",
+  "music": [
+    { "file": "../../../studio-out/audio/bgm.mp3", "at": 0, "from": 0, "dur": 29.5, "vol": 0.35, "fade_in": 0.5, "fade_out": 1.2 }
+  ],
+  "sfx": [
+    { "file": "../../../studio-out/audio/click.mp3", "at": 0.9, "vol": 0.5 },
+    { "file": "../../../studio-out/audio/pop.mp3", "at": 9.6, "vol": 0.45 }
+  ],
+  "duck": true,
+  "lufs": -14,
+  "true_peak": -1.5
+}

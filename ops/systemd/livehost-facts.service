@@ -1,0 +1,8 @@
+[Unit]
+Description=livehost: Binance activity announcements to the server (radio talking points)
+
+[Service]
+Type=oneshot
+EnvironmentFile=-/etc/livehost/square.env
+WorkingDirectory=/opt/livehost/ops
+ExecStart=/opt/livehost/ops/venv/bin/python /opt/livehost/ops/facts.py

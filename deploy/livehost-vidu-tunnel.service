@@ -1,0 +1,23 @@
+# Optional, not installed by install.sh. Use it only when this server cannot reach Vidu's API directly but another
+# server you control can. Only api.vidu.cn:443 is forwarded, to 127.0.0.1:4931 here. Lock the key on the other side to
+# that one forward (authorized_keys: restrict,permitopen="api.vidu.cn:443" ...). /etc/hosts maps api.vidu.cn to
+# 127.0.0.1 so TLS still checks the real certificate, and livehost.env sets VIDU_BASE=https://api.vidu.cn:4931/live/v1.
+# Replace {{TUNNEL_HOST}} with user@host of the server that can reach Vidu, then:
+#   ssh-keygen -t ed25519 -N '' -f /etc/livehost/vidu-tunnel
+#   ssh-keyscan <that host> > /etc/livehost/vidu-tunnel.known_hosts
+#   echo '127.0.0.1 api.vidu.cn' >> /etc/hosts
+#   cp deploy/livehost-vidu-tunnel.service /etc/systemd/system/ && systemctl enable --now livehost-vidu-tunnel
+[Unit]
+Description=livehost: Vidu tunnel through another server
+After=network-online.target
+Wants=network-online.target
+Before=livehost.service
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/ssh -N -T -i /etc/livehost/vidu-tunnel -o IdentitiesOnly=yes -o BatchMode=yes -o ExitOnForwardFailure=yes -o ServerAliveInterval=10 -o ServerAliveCountMax=3 -o StrictHostKeyChecking=yes -o UserKnownHostsFile=/etc/livehost/vidu-tunnel.known_hosts -L 127.0.0.1:4931:api.vidu.cn:443 {{TUNNEL_HOST}}
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

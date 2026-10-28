@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<!-- The title and description are filled in from /api/state with the host's name (see i18n.js setVars). -->
+<title data-i18n="{name} · 陪你熬夜的 AI 主播">AI live host</title>
+<meta name="description" data-i18n-content="{name} 是 AI 直播主播：读弹幕、记得常来的人、顺嘴聊行情，每晚在币安广场和这里直播。" content="An AI live host who reads the chat, remembers the regulars and talks about the market, live every night.">
+<meta property="og:title" content="AI live host">
+<meta property="og:description" content="An AI live host who reads the chat and remembers the regulars. Live every night.">
+<meta name="twitter:card" content="summary">
+<meta name="theme-color" content="#090b10">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<div class="room">
+  <!-- Who she is: the first thing a newcomer reads, next to her live picture. -->
+  <section class="about" aria-labelledby="name">
+    <header class="mark">
+      <span class="badge" id="badge" aria-hidden="true"></span>
+      <div>
+        <h1 id="name"></h1>
+        <p class="air" id="air"><i></i><span id="airText" data-i18n="现在没在播">Off air</span></p>
+      </div>
+      <button class="lang" id="langBtn" type="button" data-i18n-aria-label="切换语言" aria-label="Switch language">中</button>
+    </header>
+    <p class="lead" data-i18n="{name} 是陪你熬夜看盘的 AI 主播。">An AI host who stays up with you.</p>
+    <p class="sub" data-i18n="她读弹幕、记得常来的人，顺嘴聊聊行情。每晚在币安广场和这里同时直播，两边的话她都回。">She reads the chat, remembers the regulars and talks about the market. Every night she streams on Binance Square and here at the same time, and answers both.</p>
+    <ol class="how">
+      <li data-i18n="起个昵称进来">Pick a nickname</li>
+      <li data-i18n="跟她说句话，或者点她做个动作">Say something, or tap a move</li>
+      <li data-i18n="明天再来，她还记得你">Come back tomorrow. She'll remember you</li>
+    </ol>
+    <button class="go" id="goBtn" type="button" data-i18n="跟她打个招呼">Say hi to her</button>
+    <a class="square" id="squareBtn" hidden target="_blank" rel="noopener" data-i18n="去币安广场看她直播">Watch her on Binance Square</a>
+    <p class="square-soon" id="squareSoon" data-i18n="币安广场直播间马上开。">Her Binance Square room opens soon.</p>
+    <!-- Her own accounts, shown only when the host config names them. -->
+    <p class="links" id="links" hidden>
+      <a id="xLink" hidden target="_blank" rel="noopener" data-i18n="她的 X">Her X</a>
+      <a id="tgLink" hidden target="_blank" rel="noopener" data-i18n="她的 Telegram 群">Her Telegram group</a>
+    </p>
+
+    <dl class="facts">
+      <div><dt data-i18n="在看">Watching</dt><dd id="viewers">0</dd></div>
+      <div><dt data-i18n="她记得的常客">Regulars she remembers</dt><dd id="regulars">0</dd></div>
+      <div><dt data-i18n="开播时间">Show time</dt><dd id="showTime">—</dd></div>
+    </dl>
+
+    <!-- What she can see of the market (Binance spot), and her own daily call with yesterday's answer. -->
+    <section class="board" id="board" aria-labelledby="boardTitle">
+      <h2 id="boardTitle" data-i18n="她现在看的盘">The board she's watching</h2>
+      <ul class="ticks" id="ticks"></ul>
+      <p class="coin-count" id="coinCount"></p>
+      <p class="calls" id="calls"></p>
+    </section>
+
+    <section class="diary" aria-labelledby="diaryTitle">
+      <h2 id="diaryTitle" data-i18n="她的日记">Her diary</h2>
+      <div class="diary-dates" id="diaryDates"></div>
+      <article id="diary"><p class="empty" data-i18n="每晚下播后她自己写一篇。">She writes one herself after every show.</p></article>
+    </section>
+  </section>
+
+  <!-- The live picture: a phone held up in a dark room. -->
+  <section class="stage-col">
+    <div class="phone" id="stage" data-i18n-aria-label="直播画面" aria-label="Live picture">
+      <div class="screen" id="screen">
+        <!-- Neutral placeholder until her still picture (public/art/<id>/looks/s1.jpg) loads; nothing of her is shipped. -->
+        <div class="still ph" id="placeholder" aria-hidden="true"><svg viewBox="0 0 90 160" width="90" height="160"><circle cx="45" cy="58" r="22"/><path d="M8 160c2-42 18-62 37-62s35 20 37 62z"/></svg></div>
+        <img class="still" id="still" alt="" hidden>
+        <video class="live" id="liveVideo" playsinline muted hidden></video>
+        <div class="live volc" id="volcView" hidden></div>
+        <p class="connecting" id="rtc" hidden data-i18n="画面接入中…">Connecting the picture…</p>
+        <div class="move" id="moveTag" hidden></div>
+        <div class="caption" aria-live="polite">
+          <p class="reply-to" id="replyTo"></p>
+          <p class="line" id="line"></p>
+        </div>
+        <div class="offair" id="offair" hidden>
+          <p class="off-k" data-i18n="她还没上线">She's not on yet</p>
+          <p class="off-t" id="nextWrap" hidden><span data-i18n="下次开播">Next show</span> <b id="nextShow">—</b></p>
+          <p class="off-c" id="countdown"></p>
+          <p class="off-n" id="offNote"></p>
+        </div>
+      </div>
+      <button class="sound" id="soundBtn" type="button" aria-pressed="false" data-i18n="开声音">Sound on</button>
+    </div>
+  </section>
+
+  <!-- Chat: web and Square lines in one stream. -->
+  <section class="talk" aria-labelledby="talkTitle">
+    <h2 id="talkTitle" data-i18n="弹幕">Chat</h2>
+    <ul class="chat" id="chat"></ul>
+    <form class="say" id="joinForm">
+      <label for="nickInput" data-i18n="起个昵称，她会这样叫你">Pick a nickname. She'll call you that</label>
+      <div class="row">
+        <input id="nickInput" maxlength="12" autocomplete="nickname" data-i18n-placeholder="比如：熬夜的老王" placeholder="e.g. night owl">
+        <button type="submit" data-i18n="进来">Join</button>
+      </div>
+    </form>
+    <form class="say" id="sayForm" hidden>
+      <div class="me"><span id="meName"></span><button type="button" id="logoutBtn" class="link" data-i18n="换个昵称">Change name</button></div>
+      <div class="moves" id="moves" role="group" data-i18n-aria-label="点她做个动作" aria-label="Tap a move"></div>
+      <div class="row">
+        <input id="sayInput" maxlength="80" autocomplete="off" data-i18n-placeholder="跟她说点什么" placeholder="Say something to her">
+        <button type="submit" data-i18n="发送">Send</button>
+      </div>
+    </form>
+    <p class="hint" id="hint"></p>
+  </section>
+</div>
+<footer class="foot"><span id="routes"></span><span data-i18n="{name} 是 AI，她说的不是投资建议。">This host is an AI. Nothing she says is financial advice.</span></footer>
+<script src="/vendor/hls.min.js"></script>
+<script type="module" src="/app.js"></script>
+</body>
+</html>

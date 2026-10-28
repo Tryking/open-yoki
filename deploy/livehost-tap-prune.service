@@ -1,0 +1,7 @@
+# Only matters with SQUARE_TAP set (a copy of every stream that goes out, a few GB a night): keep 3 days.
+[Unit]
+Description=livehost: delete show recordings older than 3 days
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/find /var/lib/livehost/tap -maxdepth 1 -name *.ts -mtime +2 -delete

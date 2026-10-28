@@ -1,0 +1,51 @@
+<!doctype html>
+<!-- The relay's eyes: a headless browser opens this page on 127.0.0.1 only. It joins the avatar provider's TRTC room
+     with the one viewer ticket, records her picture and voice with MediaRecorder and sends the chunks back over a
+     WebSocket; server/relay.mjs turns them into HLS that every visitor's page plays. Never served on the public site. -->
+<meta charset="utf-8">
+<title>relay</title>
+<body style="margin:0;background:#000">
+<div id="v" style="width:720px;height:1280px"></div>
+<script src="vendor/trtc.js"></script>
+<script>
+const q = new URLSearchParams(location.search);
+const log = (...a) => { console.log('[relay]', ...a); try { ws?.readyState === 1 && ws.send(JSON.stringify({ log: a.join(' ') })); } catch {} };
+let ws, rec;
+
+async function main() {
+  const cfg = await (await fetch('/config')).json();
+  ws = new WebSocket(`ws://${location.host}/media`);
+  ws.binaryType = 'arraybuffer';
+  await new Promise((res, rej) => { ws.onopen = res; ws.onerror = rej; });
+  const trtc = TRTC.create();
+  const tracks = {};
+  // Start recording once she has both picture and voice (or picture alone after a grace period).
+  const maybeStart = () => {
+    if (rec || !tracks.video) return;
+    if (!tracks.audio && !maybeStart.late) { setTimeout(() => { maybeStart.late = true; maybeStart(); }, 3000); return; }
+    const stream = new MediaStream([tracks.video, tracks.audio].filter(Boolean));
+    const type = ['video/webm;codecs=h264,opus', 'video/webm;codecs=vp8,opus', 'video/webm'].find(t => MediaRecorder.isTypeSupported(t));
+    rec = new MediaRecorder(stream, { mimeType: type, videoBitsPerSecond: 2_500_000, audioBitsPerSecond: 96_000 });
+    rec.ondataavailable = e => e.data.size && e.data.arrayBuffer().then(b => ws.readyState === 1 && ws.send(b));
+    rec.start(cfg.sliceMs || 500);
+    ws.send(JSON.stringify({ started: type, audio: !!tracks.audio }));
+    log('recording', type, 'audio', !!tracks.audio);
+  };
+  trtc.on(TRTC.EVENT.REMOTE_VIDEO_AVAILABLE, async ({ userId, streamType }) => {
+    log('video from', userId, streamType);
+    await trtc.startRemoteVideo({ userId, streamType, view: 'v', option: { fillMode: 'contain' } });
+    tracks.video = trtc.getVideoTrack({ userId, streamType });
+    maybeStart();
+  });
+  trtc.on(TRTC.EVENT.REMOTE_AUDIO_AVAILABLE, ({ userId }) => {
+    log('audio from', userId);
+    setTimeout(() => { tracks.audio = trtc.getAudioTrack({ userId }); maybeStart(); }, 300);
+  });
+  trtc.on(TRTC.EVENT.REMOTE_VIDEO_UNAVAILABLE, () => log('video gone'));
+  trtc.on(TRTC.EVENT.KICKED_OUT, e => { log('kicked', e.reason); ws.send(JSON.stringify({ ended: 'kicked ' + e.reason })); });
+  trtc.on(TRTC.EVENT.ERROR, e => log('error', e.code, e.message));
+  await trtc.enterRoom({ sdkAppId: Number(cfg.app_id), userId: cfg.user_id, userSig: cfg.token, strRoomId: cfg.channel_id, scene: 'rtc', autoReceiveAudio: true });
+  log('in room', cfg.channel_id);
+}
+main().catch(e => { log('failed', e.message || e); ws?.readyState === 1 && ws.send(JSON.stringify({ ended: 'failed ' + (e.message || e) })); });
+</script>

@@ -1,0 +1,14 @@
+[
+  { "label": "弹幕 / chat", "say": "【弹幕】小林：今天SOL又被套了" },
+  { "label": "弹幕 / chat", "say": "【弹幕】阿杰：主播今晚吃啥了" },
+  { "label": "弹幕 / chat", "say": "【弹幕】老周：BTC还能涨吗" },
+  { "label": "弹幕 / chat", "say": "【弹幕】Kai：你是真人还是AI啊" },
+  { "label": "弹幕 / chat", "say": "【弹幕】糖果：合约爆仓了 一万U没了" },
+  { "label": "弹幕 / chat", "say": "【弹幕】路人甲：无聊" },
+  { "label": "English chat", "say": "【弹幕】Mike：hey, what are you trading tonight?" },
+  { "label": "冷场 / quiet", "say": "【冷场】三分钟没人打字，直播间里有人在看。" },
+  { "label": "冷场，刷到快讯 / quiet + news", "say": "【快讯】全网过去4小时爆仓1.9亿美元，多单占九成。" },
+  { "label": "冷场，接着上一句 / keep going", "more": true },
+  { "label": "弹幕 / chat", "say": "【弹幕】夜猫子：睡不着 失恋了" },
+  { "label": "弹幕 / chat", "say": "【弹幕】小白：新手该买啥币啊" }
+]

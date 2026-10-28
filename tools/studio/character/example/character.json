@@ -1,0 +1,39 @@
+{
+  "name": "Mika",
+  "_note": "Fictional sample character. No photos ship with this package: put your own images next to this file with the names below (see README.md in this folder).",
+  "face": "face.png",
+  "body": "body.png",
+  "sides": ["side-left.png", "side-right.png"],
+  "identity": "young woman in her early twenties, large round dark-brown eyes with soft double eyelids, straight see-through bangs, small straight nose, small full lips with a natural pink tint, soft oval face with a rounded chin, light natural makeup, shoulder-length dark-brown hair",
+  "outfit": "oversized cream knit sweater over a white T-shirt, light-blue straight jeans, white sneakers",
+  "scene": "a cozy streaming room at night, warm desk lamp, soft purple LED strip on the wall behind her",
+  "aspect": "16:9",
+  "looks": {
+    "daily": {
+      "label": "Everyday",
+      "use": "chat streams, greetings, reactions",
+      "ref": "looks/daily.png",
+      "vibe": "fresh natural makeup, relaxed friendly half-smile, bright lively eyes"
+    },
+    "stage": {
+      "label": "Stage",
+      "use": "dance clips, music videos",
+      "ref": "looks/stage.png",
+      "outfit": "short black cropped jacket over a white top, black wide-leg trousers, silver hoop earrings",
+      "vibe": "slightly bolder eyeliner, glossy lips, confident performer smile"
+    }
+  },
+  "live": {
+    "frame": "live/frame.png",
+    "outfit": "oversized cream knit sweater",
+    "vibe": "same as the live stream: relaxed, friendly"
+  },
+  "voice": {
+    "doubao_speaker": "",
+    "singing_reference": "voice/speaking-ref.wav"
+  },
+  "calib": {
+    "bad": [],
+    "good": []
+  }
+}

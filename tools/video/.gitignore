@@ -1,0 +1,8 @@
+__pycache__/
+.venv/
+clips/config.json
+update-video/out/
+update-video/assets/*/*
+!update-video/assets/*/.gitkeep
+fonts/*
+!fonts/README.md

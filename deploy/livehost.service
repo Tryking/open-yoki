@@ -1,0 +1,26 @@
+[Unit]
+Description=livehost: the AI host's live server
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=livehost
+Group=livehost
+WorkingDirectory=/opt/livehost/app
+# every key and setting (root 600, never inside the app folder); see .env.example
+EnvironmentFile=/etc/livehost/livehost.env
+Environment=HOME=/var/lib/livehost
+ExecStart=/usr/bin/node --dns-result-order=ipv4first server/index.mjs
+Restart=always
+RestartSec=5
+UMask=0027
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/livehost
+TimeoutStopSec=15
+
+[Install]
+WantedBy=multi-user.target

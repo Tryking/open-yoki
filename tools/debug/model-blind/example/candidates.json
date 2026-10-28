@@ -1,0 +1,9 @@
+{
+  "system_file": "persona.md",
+  "recent": 6,
+  "candidates": [
+    { "name": "model-a", "provider": "openai", "base_url": "https://openrouter.ai/api/v1", "model": "<model id A>", "key_env": "OPENROUTER_API_KEY", "temperature": 1.0 },
+    { "name": "model-b", "provider": "openai", "base_url": "https://openrouter.ai/api/v1", "model": "<model id B>", "key_env": "OPENROUTER_API_KEY", "temperature": 1.0 },
+    { "name": "my-brain", "provider": "command", "cmd": "<a command that reads {system, messages} JSON on stdin and prints one line, e.g. a small script around your own brain>" }
+  ]
+}

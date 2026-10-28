@@ -1,0 +1,6 @@
+{
+  "my-clone": { "engine": "doubao", "key_env": "DOUBAO_TTS_KEY", "speaker_env": "DOUBAO_SPEAKER_ID", "resource": "seed-icl-2.0", "sample_rate": 24000 },
+  "stock-voice": { "engine": "doubao", "key_env": "DOUBAO_TTS_KEY", "speaker": "<a stock voice id from the console>", "resource": "seed-tts-2.0", "additions": { "model": "seed-tts-2.0-expressive" } },
+  "my-cli": { "engine": "command", "cmd": "my-tts --text \"$TTS_TEXT\" --style \"$TTS_CTX\" --speed \"$TTS_SPEED\" --out \"$TTS_OUT\"" },
+  "mock": { "engine": "mock" }
+}

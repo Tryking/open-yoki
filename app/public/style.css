@@ -1,0 +1,168 @@
+/* The host's room. The idea: a dark room at night where the only light is the phone in the middle. Her screen throws a
+   warm Binance-yellow spill onto everything around it; the rest stays dim and quiet. Her diary is set like a notebook. */
+:root {
+  --night: #090b10;      /* the room */
+  --wall: #12151d;       /* surfaces the screen light falls on */
+  --glow: #f0b90b;       /* the screen, the one button */
+  --amber: #c98f12;      /* secondary accents */
+  --paper: #ece6d8;      /* text */
+  --dusk: #8d8a99;       /* muted text, cool like screen-lit shadows */
+  --edge: rgba(240, 185, 11, .16);
+  --sans: "Avenir Next", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, sans-serif;
+  --note: "Songti SC", "STSong", Georgia, "Noto Serif SC", serif;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { min-height: 100vh; min-height: 100dvh; background: var(--night); color: var(--paper); font: 15px/1.6 var(--sans); display: flex; flex-direction: column; }
+button, input { font: inherit; color: inherit; }
+button { cursor: pointer; }
+[hidden] { display: none !important; }
+:focus-visible { outline: 2px solid var(--glow); outline-offset: 2px; }
+
+.room { flex: 1; display: grid; grid-template-columns: minmax(300px, 380px) 1fr minmax(300px, 380px); grid-template-areas: "about stage talk"; min-height: 0; height: calc(100dvh - 34px); }
+.about { grid-area: about; overflow-y: auto; padding: 28px 28px 24px; }
+.stage-col { grid-area: stage; position: relative; display: flex; align-items: center; justify-content: center; padding: 24px 12px; container-type: size; }
+.talk { grid-area: talk; display: flex; flex-direction: column; min-height: 0; padding: 24px 20px 18px; }
+
+/* the screen light: the one loud thing on the page, brighter while she is live */
+.stage-col::before { content: ""; position: absolute; inset: 0; background: radial-gradient(closest-side at 50% 52%, rgba(240, 185, 11, .16), rgba(240, 185, 11, .05) 55%, transparent 100%); pointer-events: none; transition: opacity 1.2s; opacity: .45; }
+body.on .stage-col::before { opacity: 1; }
+
+/* her name and the live light */
+.mark { display: flex; align-items: center; gap: 14px; }
+.mark .badge { width: 52px; height: 52px; flex: none; border-radius: 50%; display: grid; place-items: center; background: radial-gradient(circle at 35% 30%, #2a2414, var(--wall)); color: var(--glow); font: 800 22px/1 var(--sans); box-shadow: 0 0 0 2px var(--night), 0 0 0 3px var(--amber); }
+.mark > div { flex: 1; }
+.mark h1 { margin: 0; font: 800 40px/0.95 var(--sans); letter-spacing: -.03em; color: var(--paper); }
+.air { margin: 6px 0 0; display: flex; align-items: center; gap: 7px; font-size: 13px; color: var(--dusk); }
+.air i { width: 8px; height: 8px; border-radius: 50%; background: #4a4855; }
+body.on .air { color: var(--glow); }
+body.on .air i { background: var(--glow); box-shadow: 0 0 10px var(--glow); animation: breathe 2.4s ease-in-out infinite; }
+body.offline .air i { background: #4a4855; box-shadow: none; animation: none; }
+@keyframes breathe { 50% { opacity: .35; } }
+.lang { align-self: flex-start; background: none; border: 1px solid var(--edge); border-radius: 99px; padding: 3px 11px; font-size: 13px; color: var(--dusk); }
+.lang:hover { color: var(--paper); border-color: var(--dusk); }
+
+.lead { margin: 30px 0 10px; font-size: 26px; line-height: 1.25; font-weight: 700; letter-spacing: -.01em; text-wrap: balance; }
+.sub { margin: 0 0 22px; color: var(--dusk); max-width: 34em; }
+.how { list-style: none; counter-reset: s; margin: 0 0 20px; padding: 0; display: grid; gap: 9px; }
+.how li { counter-increment: s; display: flex; gap: 11px; align-items: baseline; }
+.how li::before { content: counter(s); flex: none; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font-size: 12px; font-weight: 700; color: var(--night); background: var(--amber); transform: translateY(1px); }
+.go { width: 100%; border: 0; border-radius: 14px; padding: 14px 18px; background: var(--glow); color: #17120a; font-size: 17px; font-weight: 800; box-shadow: 0 10px 34px rgba(240, 185, 11, .28); }
+.go:hover { background: #ffc928; }
+.square { display: block; margin-top: 10px; text-align: center; border: 1px solid var(--amber); border-radius: 14px; padding: 11px 18px; color: var(--glow); text-decoration: none; font-weight: 700; }
+.square:hover { background: rgba(240, 185, 11, .08); }
+.square-soon { margin: 10px 0 0; text-align: center; font-size: 13px; color: var(--dusk); }
+.links { display: flex; gap: 16px; justify-content: center; margin: 10px 0 0; font-size: 13px; }
+.links a { color: var(--glow); text-decoration: none; }
+.links a:hover { text-decoration: underline; }
+
+.facts { margin: 26px 0 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--edge); border-radius: 12px; overflow: hidden; }
+.facts div { background: var(--wall); padding: 10px 12px; }
+.facts dt { font-size: 12px; color: var(--dusk); line-height: 1.3; }
+.facts dd { margin: 4px 0 0; font-weight: 700; font-size: 16px; font-variant-numeric: tabular-nums; }
+.facts div:last-child dd { font-size: 13px; }
+
+/* her diary: a page out of a notebook */
+.board { margin-top: 22px; }
+.board h2 { margin: 0 0 10px; font-size: 15px; font-weight: 700; }
+.ticks { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px 12px; }
+.ticks li { display: grid; grid-template-columns: auto 1fr; column-gap: 6px; align-items: baseline; font-variant-numeric: tabular-nums; }
+.ticks b { font-size: 12px; color: var(--dusk); font-weight: 600; }
+.ticks span { font-size: 14px; font-weight: 700; text-align: right; }
+.ticks i { grid-column: 2; font-style: normal; font-size: 12px; text-align: right; }
+.ticks .up { color: #2ebd85; }
+.ticks .down { color: #f0616d; }
+.coin-count { margin: 10px 0 0; font-size: 12px; color: var(--dusk); }
+.calls { margin: 8px 0 0; font-size: 13px; line-height: 1.6; color: var(--dusk); }
+.calls b { color: var(--paper); font-weight: 600; }
+.diary { margin-top: 28px; }
+.diary h2, .talk h2 { margin: 0 0 10px; font-size: 15px; font-weight: 700; color: var(--paper); }
+.diary-dates { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.diary-dates button { background: none; border: 1px solid var(--edge); border-radius: 99px; padding: 2px 10px; font-size: 12px; color: var(--dusk); }
+.diary-dates button.on { color: var(--night); background: var(--amber); border-color: var(--amber); }
+.diary article { font: 15px/1.9 var(--note); color: #d9d2c2; padding: 14px 16px; border-radius: 4px; background: repeating-linear-gradient(transparent 0 calc(1.9em - 1px), rgba(236, 230, 216, .07) calc(1.9em - 1px) 1.9em), var(--wall); background-position: 0 14px; }
+.diary article p { margin: 0 0 .5em; }
+.empty { color: var(--dusk); }
+
+/* the phone */
+.phone { position: relative; z-index: 1; aspect-ratio: 9 / 16; height: min(100cqh, 100cqw * 16 / 9); max-height: 100%; }
+.screen { position: absolute; inset: 0; border-radius: 30px; overflow: hidden; background: #000; box-shadow: 0 0 0 8px #050608, 0 0 0 9px rgba(240, 185, 11, .22), 0 40px 120px rgba(0, 0, 0, .7); }
+.still, .live { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
+.volc video { width: 100%; height: 100%; object-fit: cover; }
+/* the placeholder until her still picture loads: a soft silhouette in the screen light, no face */
+.still.ph { display: grid; place-items: center; background: radial-gradient(closest-side at 50% 45%, #2a2414, #0b0c10); }
+.still.ph svg { width: 34%; height: auto; fill: rgba(240, 185, 11, .18); }
+.connecting { position: absolute; top: 16px; left: 50%; transform: translateX(-50%); margin: 0; padding: 5px 12px; border-radius: 99px; background: rgba(0, 0, 0, .55); font-size: 12px; color: var(--paper); }
+.move { position: absolute; top: 18px; right: 16px; z-index: 2; padding: 4px 12px; border-radius: 99px; background: rgba(9, 11, 16, .7); color: var(--glow); font-size: 13px; font-weight: 700; }
+.move.pop { animation: pop .5s ease-out; }
+@keyframes pop { from { transform: scale(.7); opacity: 0; } }
+.caption { position: absolute; left: 0; right: 0; bottom: 0; z-index: 2; padding: 70px 22px 24px; background: linear-gradient(transparent, rgba(5, 6, 9, .82) 46%); pointer-events: none; }
+.reply-to { margin: 0 0 6px; font-size: 12px; color: var(--dusk); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.reply-to b { color: var(--amber); font-weight: 600; }
+.line { margin: 0; font-size: 18px; line-height: 1.5; font-weight: 600; color: #fff; text-shadow: 0 1px 8px rgba(0, 0, 0, .6); max-height: 4.5em; overflow: hidden; }
+.offair { position: absolute; inset: 0; z-index: 3; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 28px; background: rgba(5, 6, 9, .72); backdrop-filter: blur(3px); }
+.offair p { margin: 0; }
+.off-k { font-size: 26px; font-weight: 800; }
+.off-t { margin-top: 12px !important; color: var(--dusk); }
+.off-t b { color: var(--glow); font-size: 19px; margin-left: 4px; }
+.off-c { margin-top: 4px !important; font: 700 34px/1.1 var(--sans); font-variant-numeric: tabular-nums; letter-spacing: .04em; }
+.off-n { margin-top: 18px !important; max-width: 20em; font-size: 13px; color: var(--dusk); }
+.sound { position: absolute; z-index: 4; left: 50%; bottom: -46px; transform: translateX(-50%); background: none; border: 1px solid var(--edge); border-radius: 99px; padding: 5px 16px; font-size: 13px; color: var(--dusk); }
+.sound[aria-pressed="true"], .sound:hover { color: var(--glow); border-color: var(--amber); }
+.phone { margin-bottom: 40px; }
+
+/* chat: web and Square in one stream */
+.chat { list-style: none; margin: 0; padding: 0 4px 0 0; flex: 1; min-height: 120px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
+.chat li { font-size: 14px; line-height: 1.5; }
+.chat li b { color: var(--amber); font-weight: 600; margin-right: 6px; }
+.chat li.req .txt { color: var(--dusk); }
+.chat li em { font-style: normal; font-size: 11px; color: var(--glow); margin-left: 6px; }
+.src { display: inline-block; font-size: 10px; line-height: 1; padding: 3px 5px; border-radius: 4px; margin-right: 6px; vertical-align: 1px; color: var(--dusk); background: rgba(141, 138, 153, .14); }
+.src-square { color: var(--night); background: var(--glow); }
+.src-x { color: #fff; background: #111; }
+.say { margin-top: 14px; display: grid; gap: 8px; }
+.say label { font-size: 13px; color: var(--dusk); }
+.row { display: flex; gap: 8px; }
+.row input { flex: 1; min-width: 0; background: var(--wall); border: 1px solid var(--edge); border-radius: 12px; padding: 10px 12px; }
+.row input::placeholder { color: #5c5a68; }
+.row input:focus { border-color: var(--amber); outline: none; }
+.row button { border: 0; border-radius: 12px; padding: 0 18px; background: var(--glow); color: #17120a; font-weight: 800; }
+.me { display: flex; justify-content: space-between; align-items: center; font-size: 13px; }
+.me span { color: var(--amber); font-weight: 700; }
+.link { background: none; border: 0; padding: 0; color: var(--dusk); text-decoration: underline; font-size: 12px; }
+.moves { display: flex; flex-wrap: wrap; gap: 6px; }
+.moves button { background: var(--wall); border: 1px solid var(--edge); border-radius: 99px; padding: 5px 13px; font-size: 13px; }
+.moves button:hover { border-color: var(--amber); color: var(--glow); }
+.moves button:disabled { opacity: .5; }
+.hint { margin: 8px 0 0; font-size: 12px; color: var(--dusk); min-height: 1.5em; }
+.hint.bad { color: #ff8a7a; }
+
+.foot { height: 34px; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 0 20px; font-size: 12px; color: #5c5a68; }
+.route { margin-right: 10px; }
+.route.down { color: #ff8a7a; }
+
+@media (max-width: 1100px) {
+  .room { grid-template-columns: minmax(280px, 340px) 1fr; grid-template-areas: "about stage" "talk stage"; grid-template-rows: auto 1fr; }
+  .about { padding-bottom: 0; }
+  .diary { display: none; }
+}
+/* phones: who she is, then her picture, then the chat; the diary at the end */
+@media (max-width: 720px) {
+  .room { display: flex; flex-direction: column; height: auto; }
+  .about { display: contents; }
+  .mark { order: 1; padding: 16px 18px 0; }
+  .lead { order: 2; margin: 14px 18px 4px; font-size: 21px; }
+  .sub { order: 3; margin: 0 18px 12px; font-size: 14px; }
+  .stage-col { order: 4; container-type: normal; padding: 0 18px; }
+  .phone { width: min(100%, 64dvh * 9 / 16); height: auto; max-height: none; margin: 0 auto 44px; }
+  .how { order: 5; margin: 0 18px 14px; }
+  .go { order: 6; width: auto; margin: 0 18px; }
+  .square, .square-soon, .links { order: 7; margin-left: 18px; margin-right: 18px; }
+  .talk { order: 8; padding: 22px 18px; }
+  .chat { max-height: 50vh; }
+  .facts { order: 9; margin: 0 18px; }
+  .board { order: 9; margin: 20px 18px 0; }
+  .diary { order: 10; display: block; margin: 24px 18px 10px; }
+  .foot { height: auto; flex-direction: column; align-items: flex-start; padding: 12px 18px 18px; }
+}
+@media (prefers-reduced-motion: reduce) { *, *::before { animation: none !important; transition: none !important; } }

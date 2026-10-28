@@ -1,0 +1,31 @@
+# dependencies and builds
+node_modules/
+venv/
+.venv/
+__pycache__/
+*.pyc
+
+# settings and keys: never commit these
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+bot.json
+auth.json
+
+# runtime data
+data/
+data-test/
+app/data/
+*.log
+
+# per-host ids and media you generate yourself
+app/idols/*/vidu-looks.json
+
+.DS_Store
+
+# your own never-ship word list for the scan test
+private-words.local.json
+app/relay/clips/*.mp4
+app/relay/sfx/*.mp3

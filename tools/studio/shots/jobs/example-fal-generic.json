@@ -1,0 +1,12 @@
+{
+  "_comment": "Any fal model works with via=fal: copy the model id and input fields from its page on fal.ai (ids and prices change; check before running). Strings starting with @file: are uploaded first.",
+  "name": "example-fal-generic",
+  "via": "fal",
+  "model": "fal-ai/kling-video/v3/pro/image-to-video",
+  "usd": 1.0,
+  "input": {
+    "prompt": "She looks up from the monitor and smiles at the camera. Fixed camera, waist-up.",
+    "image_url": "@file:../../character/example/looks/daily.png",
+    "duration": "5"
+  }
+}

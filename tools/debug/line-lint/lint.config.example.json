@@ -1,0 +1,12 @@
+{
+  "window": 20,
+  "min": 3,
+  "maxGapSec": 40,
+  "chartWords": ["收盘", "这根", "站住", "插针", "偏空", "偏弱"],
+  "stop": ["主播"],
+  "phrases": {
+    "disclaimer": ["不构成投资建议", "投资有风险", "我没喊单", "DYOR", "not financial advice"],
+    "quiet_complaint": ["没人", "就我一个", "一个人在这", "nobody is here"],
+    "my_own_tic": ["宝子们"]
+  }
+}

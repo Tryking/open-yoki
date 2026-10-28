@@ -1,0 +1,37 @@
+[
+  { "id": "excited-1", "emo": "excited", "scene": "BTC breaks a round number",
+    "whole": "用非常激动兴奋的语气，又笑又喊，喘着气",
+    "chunks": [
+      { "text": "破了破了破了！！", "ctx": "盯着屏幕突然喊出来，声音一下子拔到最高，快到吞字", "speed": 30, "gain": 4, "gap": 0 },
+      { "text": "等一下——", "ctx": "倒吸一口气，脱口而出，声音发尖", "speed": 20, "gain": 2, "gap": 60 },
+      { "text": "真的站上去了，你们看到没有！", "ctx": "扯着嗓子喊，激动到声音发颤，越喊越高", "speed": 28, "gain": 6, "gap": 40 },
+      { "text": "我就说嘛……哈哈哈！", "ctx": "喊完喘着气，又得意又想笑，边喘边笑", "speed": 15, "gain": 0, "gap": 250 }
+    ] },
+  { "id": "angry-1", "emo": "angry", "scene": "someone posts a scam link in chat",
+    "whole": "真的火了，又快又凶，最后压着火嘟囔",
+    "chunks": [
+      { "text": "谁——谁发的这个链接？！", "ctx": "看到弹幕瞬间火了，声音又冲又尖，咬着牙质问", "speed": 15, "gain": 3, "gap": 0 },
+      { "text": "别点！都别点！那是骗子！", "ctx": "大声提醒所有人，又急又凶，每个字都砸下去", "speed": 25, "gain": 5, "gap": 80 },
+      { "text": "……我直接踢了，真的是。", "ctx": "吼完气还没消，压低声音嘟囔，像翻了个白眼", "speed": 0, "gain": -7, "gap": 450 }
+    ] },
+  { "id": "panic-1", "emo": "panic", "scene": "her own position is close to the stop",
+    "whole": "慌得声音发抖，又快又乱，带着喘，越说越绝望",
+    "chunks": [
+      { "text": "不是不是不是……", "ctx": "慌了神，嘴里飞快地念，声音发虚，带着急促的吸气", "speed": 35, "gain": -2, "gap": 0 },
+      { "text": "别别别再跌了……", "ctx": "小声地求，声音发抖，气声很重", "speed": 15, "gain": -5, "gap": 100 },
+      { "text": "完了完了……", "ctx": "声音一下子垮下来，越说越小声", "speed": 5, "gain": -6, "gap": 350 }
+    ] },
+  { "id": "hurt-1", "emo": "hurt", "scene": "chat blames her for their loss",
+    "whole": "委屈得快哭了，带着哭腔和鼻音，越说越小声",
+    "chunks": [
+      { "text": "我……我哪有让你买啊。", "ctx": "被冤枉了，嗓子一下子发紧，带着鼻音，说得磕磕绊绊", "speed": 0, "gain": -2, "gap": 0 },
+      { "text": "我也亏了好不好……", "ctx": "眼泪要掉下来了，吸着鼻子，声音一颤一颤的", "speed": -10, "gain": -5, "gap": 300 }
+    ] },
+  { "id": "excited-en-1", "emo": "excited", "scene": "English example",
+    "whole": "very excited, laughing and shouting, out of breath",
+    "chunks": [
+      { "text": "No way, no way!", "ctx": "shouts at the screen, voice jumps up, almost cracks", "speed": 25, "gain": 5, "gap": 0 },
+      { "text": "It actually broke out...", "ctx": "catches her breath, half laughing", "speed": 10, "gain": 0, "gap": 200 },
+      { "text": "I told you! I told you!", "ctx": "laughing, loud, faster and higher", "speed": 25, "gain": 4, "gap": 60 }
+    ] }
+]

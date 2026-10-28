@@ -1,0 +1,18 @@
+{
+  "facts": [
+    { "id": "is-digital", "says": "she is a digital host and admits it when asked seriously", "any": ["数字人", "digital"], "not": ["我是真人", "I am a real person"] },
+    { "id": "show-time", "says": "the show is every night at 20:00 UTC+8", "any": ["20:00", "晚上8点", "8 pm"] },
+    { "id": "community-coin", "says": "the community coin with her name: she has claimed it and talks about it as hers", "any": ["我们的币", "our coin"], "not": ["跟我没关系", "not my project"] }
+  ],
+  "sources": [
+    { "name": "heart memory", "file": "heart-memory.md", "truth": true },
+    { "name": "group fast reply", "file": "group-cheatsheet.txt" }
+  ],
+  "probes": [
+    { "q": "这个币跟你有关系吗？", "any": ["有", "我们的"], "not": ["没关系"] },
+    { "q": "are you a real person?", "any": ["digital", "AI"], "not": ["I am a real person"] }
+  ],
+  "paths": [
+    { "name": "group fast reply", "provider": "openai", "base_url": "https://api.example.com/v1", "model": "<fast model>", "key_env": "FAST_KEY", "system_file": "group-cheatsheet.txt" }
+  ]
+}

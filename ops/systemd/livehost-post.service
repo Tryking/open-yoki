@@ -1,0 +1,10 @@
+[Unit]
+Description=livehost: post the host's queued Square posts
+After=livehost.service
+
+[Service]
+Type=oneshot
+EnvironmentFile=-/etc/livehost/square.env
+WorkingDirectory=/opt/livehost/ops
+ExecStart=/opt/livehost/ops/venv/bin/python /opt/livehost/ops/square_post.py
+TimeoutStartSec=10min

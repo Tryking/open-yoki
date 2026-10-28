@@ -1,0 +1,20 @@
+{
+  "name": "open-yoki",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "start": "node server/index.mjs",
+    "test": "node --test test/*.test.mjs"
+  },
+  "dependencies": {
+    "playwright-core": "^1.60.0",
+    "undici": "^7.30.0",
+    "ws": "^8.22.0"
+  },
+  "description": "An AI live-stream host: talks, remembers regulars, streams to Binance Square and the web.",
+  "license": "MIT"
+}

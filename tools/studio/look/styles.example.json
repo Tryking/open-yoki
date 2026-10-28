@@ -1,0 +1,11 @@
+{
+  "_note": "Style pack for look.mjs style. Each style is an edit of the master face: only the face stays, hair/outfit/mood change. Keep framing fixed so a week of styles looks like one show. Replace freely.",
+  "common": "Edit this photo. Keep ONLY the face exactly as in image 1: same eye size and shape, eyelids, nose, lips, face shape, skin tone and apparent age; do not slim, sharpen or lengthen the face, so the person is instantly recognizable. Replace hairstyle, clothes and accessories completely with the style below. Fixed framing: chest-up, centered, eye level, seated facing the camera. Photorealistic, natural skin texture and fine hair strands, like a sharp frame from a good live-stream camera. Modest, fully covered outfit. Both hands relaxed below the frame, nothing held. No text, no watermark.",
+  "styles": {
+    "sweet": { "label": "Sweet", "prompt": "Sweet style: baby-pink fluffy knit cardigan over a white blouse with a small round collar, hair in two low loose pigtails with pink ribbons, rosy blush, glossy pink lips, gentle smile." },
+    "elegant": { "label": "Elegant", "prompt": "Elegant style: tailored charcoal blazer over a black silk blouse, long straight glossy hair worn down, small gold hoop earrings, thin neat eyeliner, muted brick-red lips, calm confident slight smile." },
+    "sporty": { "label": "Sporty", "prompt": "Sporty style: oversized cream hoodie, plain black cap worn slightly tilted, high ponytail out of the back of the cap, fresh natural makeup, big bright grin." },
+    "bookish": { "label": "Bookish", "prompt": "Quiet bookish style: crisp white shirt under a light-grey knit vest, thin silver round glasses, low neat ponytail with a few loose strands, very light makeup, calm expression, a closed hardcover book beside her." },
+    "cozy": { "label": "Cozy", "prompt": "Cozy Sunday style: loose oatmeal fleece hoodie, messy high bun with a scrunchie, no-makeup look, a fluffy cushion next to her, sleepy relaxed expression." }
+  }
+}

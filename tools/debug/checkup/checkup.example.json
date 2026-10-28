@@ -1,0 +1,25 @@
+{
+  "name": "my-host",
+  "tz_offset_hours": 8,
+  "report_dir": "/var/lib/my-host/checkup",
+  "alert": { "telegram": { "token_env": "CHECKUP_TG_TOKEN", "chat_env": "CHECKUP_TG_CHAT" } },
+  "checks": [
+    { "name": "main service", "type": "command", "cmd": "systemctl is-active my-host", "expect_regex": "^active$" },
+    { "name": "heart beat", "type": "fresh", "path": "/var/lib/my-host/state/last-beat", "read": "ms", "max_age_min": 120,
+      "fix": "systemctl restart my-host", "quiet_hours": ["18:50-21:10"], "recheck_after_s": 120 },
+    { "name": "show", "type": "show", "after": "21:00", "window": "18:50-21:10", "start_by": "19:10", "end_after": "20:55",
+      "log": { "file": "/var/log/my-host/show.log", "format": "text" },
+      "frame_pattern": "push page: frames", "ended_pattern": "platform says the live ended", "chat_pattern": "^\\[room\\] ", "max_chat_gap_min": 15 },
+    { "name": "group chat answered", "type": "pair", "since_hours": 24,
+      "log": { "file": "/var/lib/my-host/state/heart-log.jsonl", "time_field": "at", "text_field": "lines" },
+      "incoming": "^\\[group ", "replied": "^\\[group reply\\]", "min_incoming": 3, "min_ratio": 0.3 },
+    { "name": "chat poll errors", "type": "count", "since_hours": 24, "max": 30,
+      "log": { "file": "/var/log/my-host/app.log", "format": "text" }, "pattern": "chat poll failed" },
+    { "name": "posted something in 2 days", "type": "count", "severity": "note", "since_hours": 48, "min": 1,
+      "log": { "file": "/var/lib/my-host/state/posts.jsonl" }, "pattern": "." },
+    { "name": "website", "type": "http", "url": "https://example.com/" },
+    { "name": "disk", "type": "disk", "path": "/", "max_used": 0.85 },
+    { "name": "comment reader logged in (your own script)", "type": "command", "cmd": "/opt/my-host/check-reader-login.sh", "timeout": 90 },
+    { "name": "trading data fresh (only if you run one)", "type": "fresh", "path": "/var/lib/my-host/state/positions.json", "max_age_min": 60, "severity": "note" }
+  ]
+}

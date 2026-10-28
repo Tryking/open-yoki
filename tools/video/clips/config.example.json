@@ -1,0 +1,53 @@
+{
+  "_comment": "Copy to config.json and edit. Paths may be local (/srv/..., ~/...) or remote rsync paths (user@your-server:/path). Remote paths use your own SSH setup (key in ~/.ssh, host alias in ~/.ssh/config); no password or key goes in this file.",
+
+  "host": {
+    "name": "Your Host",
+    "tagline_zh": "AI 主播 · 直播回放原片",
+    "chat_label": "直播间",
+    "heart_label": "她心里",
+    "heart_hint": "观众看不到",
+    "bottom_line": "她记得来过的人，自己决定说什么。"
+  },
+
+  "source": {
+    "_lives": "folder with one sub-folder per show: <id>/replay.mp4 (or detail.json with replayUrl) + detail.json + done.json",
+    "lives": "user@your-server:/srv/open-yoki/lives",
+    "_journal": "optional: folder of the show journal, one JSON-lines file per UTC day; null if each show folder already has show.jsonl",
+    "journal": "user@your-server:/var/lib/open-yoki/show",
+    "journal_pattern": "{day}.jsonl",
+    "_notes": "optional: the host's inner-notes log(s), JSON lines {\"at\", \"note\"}; [] for none",
+    "notes": []
+  },
+
+  "output_dir": "~/open-yoki-clips",
+  "state_dir": "~/.open-yoki-clips",
+  "timezone_offset_hours": 8,
+
+  "picker": {
+    "_mode": "llm (any Anthropic Messages API compatible endpoint) or heuristic (no API: stretches where she answered viewers by name)",
+    "mode": "llm",
+    "base_url": "https://api.anthropic.com",
+    "model": "claude-sonnet-4-5",
+    "api_key_env": "ANTHROPIC_API_KEY",
+    "max_clips": 6,
+    "extra_instructions": ""
+  },
+
+  "whisper": {"cmd": "whisper", "model": "small", "language": "zh"},
+  "journal_offset_s": 2.0,
+  "replay_download": true,
+  "vertical_copy": true,
+  "draw_subtitles": false,
+  "side_panel_min_width": 520,
+  "panel_crop": null,
+  "fonts": {"zh": null, "en": null},
+
+  "upload": {
+    "_comment": "off by default. When on, the 16:9 clips of every show cut in the last max_age_hours go to <dest>/<MMDD>/<MMDD>-<NN>.mp4 with offer.json",
+    "enabled": false,
+    "dest": "user@your-server:/var/lib/open-yoki/clips",
+    "max_age_hours": 36,
+    "rsync_args": ["--chmod=D755,F644"]
+  }
+}

@@ -1,0 +1,181 @@
+<!doctype html>
+<!-- The radio feed between shows (server/radio.mjs): her voice answering chat over her still picture, or over a small
+     live data board when the host config sets radio.boardUrl. No video avatar. A headless browser opens this on
+     127.0.0.1 only; MediaRecorder chunks go back over the WebSocket and ffmpeg pushes them to Square. Square's phone
+     app shows only the middle square of the 16:9 frame, so the board and her answer live there; the sides are for
+     desktop. Host-specific text (name, title) comes from /config. -->
+<meta charset="utf-8">
+<title>radio feed</title>
+<body style="margin:0;background:#000">
+<canvas id="c"></canvas>
+<img id="still" src="/still" style="display:none">
+<script>
+let ws;
+const log = (...a) => { try { ws?.readyState === 1 && ws.send(JSON.stringify({ log: a.join(' ') })); } catch {} };
+async function main() {
+  const cfg = await (await fetch('/config')).json();
+  const W = cfg.width, H = cfg.height, s = H / 720;
+  const c = document.getElementById('c'); c.width = W; c.height = H;
+  const g = c.getContext('2d');
+  const still = document.getElementById('still');
+  for (const [n, u] of [['lh-kai', '/font/kai.ttf'], ['lh-num', '/font/num.ttf']]) try { const f = new FontFace(n, `url(${u})`); await f.load(); document.fonts.add(f); } catch (e) { log('font', n, e.message || e); }
+  const font = 'px "Noto Sans CJK SC", "WenQuanYi Zen Hei", "PingFang SC", sans-serif';
+  const NUM = 'px "lh-num", ' + font.slice(3), MONO = 'px "DejaVu Sans Mono", "Menlo", monospace';
+  const BG = '#0b0e13', CARD = '#12161d', LINE = 'rgba(255,255,255,.07)', TXT = '#eef0f3', DIM = '#7d8590', Y = '#f0b90b', GREEN = '#0ecb81';
+
+  const NAME = cfg.name || '', TITLE = cfg.title || '';
+  // audio: one track from the start (silence), her answers mixed in
+  const ac = new AudioContext(), dest = ac.createMediaStreamDestination();
+  const hum = ac.createConstantSource(), mute = ac.createGain(); mute.gain.value = 0; hum.connect(mute).connect(dest); hum.start();
+  const meter = ac.createAnalyser(); meter.fftSize = 512;
+  const voiceGain = ac.createGain(); voiceGain.gain.value = 1; voiceGain.connect(dest); voiceGain.connect(meter);
+  setInterval(() => { if (ac.state !== 'running') ac.resume(); }, 500);
+  // music: whole songs under her voice, dipped while she talks; the server picks the next one. Her voice is about
+  // -25 LUFS and songs are made -18 LUFS: DIP puts a song about 10.5 dB under her (30% of her level, so words stay
+  // clear); BED is a little under her level between answers.
+  const BED = 0.40, DIP = 0.133;
+  const songGain = ac.createGain(); songGain.gain.value = BED; songGain.connect(dest);
+  let songSrc = null, nowSong = null, songShown = 0;
+  const duck = (on, ms = 0) => { const t = ac.currentTime; songGain.gain.cancelScheduledValues(t); songGain.gain.setValueAtTime(songGain.gain.value, t); songGain.gain.linearRampToValueAtTime(on ? DIP : BED, t + (on ? 0.25 : 0.9)); };
+  let unduck = null;
+  const playSong = async s => {
+    try {
+      const b = await ac.decodeAudioData(await (await fetch(s.url)).arrayBuffer());
+      try { if (songSrc) { songSrc.onended = null; songSrc.stop(); } } catch {}
+      const src = ac.createBufferSource(); src.buffer = b; src.connect(songGain);
+      src.onended = () => { if (songSrc === src) ws.send(JSON.stringify({ songEnded: s.id })); };
+      songSrc = src; nowSong = s; songShown = Date.now(); src.start();
+    } catch (e) { log('song failed', s.id, e.message || e); ws.send(JSON.stringify({ songEnded: s.id })); }
+  };
+  const play = async url => { try { const b = await ac.decodeAudioData(await (await fetch(url)).arrayBuffer()); const src = ac.createBufferSource(); src.buffer = b; src.connect(voiceGain); duck(true); clearTimeout(unduck); src.onended = () => { unduck = setTimeout(() => duck(false), 400); }; src.start(); return b.duration * 1000; } catch (e) { log('voice failed', e.message || e); return 0; } };
+
+  // state
+  let board = null, asked = [], say = null, sayAt = 0, sayMs = 0;
+  ws = new WebSocket(`ws://${location.host}/media`); ws.binaryType = 'arraybuffer';
+  ws.onmessage = async e => {
+    const m = JSON.parse(e.data);
+    if (m.song) playSong(m.song);
+    if (m.asked) { asked.push({ ...m.asked, at: Date.now() }); asked = asked.slice(-3); }
+    if (m.say) { say = m.say; sayAt = Date.now(); sayMs = m.say.ms || 6000; if (m.say.audio) { const d = await play(m.say.audio); if (d) sayMs = d; } asked = asked.filter(a => a.q !== m.say.q); }
+  };
+  await new Promise((res, rej) => { ws.onopen = res; ws.onerror = rej; });
+
+  // The optional data board (cfg.board): the server fetches radio.boardUrl and hands it over at /board. It is drawn
+  // when it has this shape: { title, big, bigLabel, rows: [{ name, value, note }] } (every field optional).
+  async function poll() {
+    try { const b = await (await fetch('/board')).json(); board = b && (b.title || b.big != null || b.rows?.length) ? b : null; }
+    catch (e) { log('board', e.message || e); }
+  }
+  if (cfg.board) { await poll(); setInterval(poll, 3000); }
+
+  const text = (t, x, y, f, col, al = 'left', base = 'alphabetic') => { g.font = f; g.fillStyle = col; g.textAlign = al; g.textBaseline = base; g.fillText(t, x, y); return g.measureText(t).width; };
+  const fmt = v => typeof v === 'number' ? Math.round(v).toLocaleString('en-US') : String(v ?? '');
+  const wrap = (t, max, n) => { const out = []; let line = ''; for (const ch of String(t).match(/[A-Za-z0-9.\/$%_+-]+|[\s\S]/gu) || []) { if (line && g.measureText(line + ch).width > max) { out.push(line); line = ch; } else line += ch; } if (line) out.push(line); if (out.length > n) { out.length = n; out[n - 1] = out[n - 1].slice(0, -1) + '…'; } return out; };
+  const fit = (t, max, f) => { g.font = f; t = String(t); if (g.measureText(t).width <= max) return t; while (t && g.measureText(t + '…').width > max) t = t.slice(0, -1); return t + '…'; };
+  const rms = () => { const b = new Float32Array(meter.fftSize); meter.getFloatTimeDomainData(b); return Math.sqrt(b.reduce((t, x) => t + x * x, 0) / b.length); };
+  let level = 0;
+
+  // her picture in a circle; a soft placeholder when the still picture is missing
+  function avatar(cx, cy, r) {
+    g.save(); g.beginPath(); g.arc(cx, cy, r, 0, Math.PI * 2); g.clip();
+    if (still.complete && still.naturalWidth) { const sw = still.naturalWidth, side = sw * 0.62; g.drawImage(still, (sw - side) / 2, still.naturalHeight * 0.08, side, side, cx - r, cy - r, r * 2, r * 2); }
+    else { g.fillStyle = '#1d222b'; g.fillRect(cx - r, cy - r, r * 2, r * 2); g.fillStyle = 'rgba(240,185,11,.25)'; g.beginPath(); g.arc(cx, cy - r * 0.15, r * 0.38, 0, 7); g.fill(); g.beginPath(); g.ellipse(cx, cy + r * 0.75, r * 0.7, r * 0.5, 0, 0, 7); g.fill(); }
+    g.restore();
+    g.strokeStyle = Y; g.lineWidth = 3 * s; g.beginPath(); g.arc(cx, cy, r + 3 * s, 0, Math.PI * 2); g.stroke();
+  }
+
+  function draw() {
+    const t = performance.now();
+    level = level * 0.8 + Math.min(1, rms() * 6) * 0.2;
+    g.fillStyle = BG; g.fillRect(0, 0, W, H);
+    g.strokeStyle = 'rgba(255,255,255,.025)'; g.lineWidth = 1;
+    for (let x = 0; x < W; x += 40 * s) { g.beginPath(); g.moveTo(x, 0); g.lineTo(x, H); g.stroke(); }
+    for (let y = 0; y < H; y += 40 * s) { g.beginPath(); g.moveTo(0, y); g.lineTo(W, y); g.stroke(); }
+
+    // ---- middle square (what the phone app shows): the title, the board or her picture, her answer
+    const M = (W - H) / 2 + 24 * s, MW = H - 48 * s;
+    const pulse = 0.5 + 0.5 * Math.sin(t / 400);
+    g.fillStyle = `rgba(14,203,129,${0.35 + 0.65 * pulse})`; g.beginPath(); g.arc(M + 8 * s, 46 * s, 6 * s, 0, Math.PI * 2); g.fill();
+    text(fit(board?.title || TITLE, MW - 40 * s, '600 ' + 20 * s + font), M + 24 * s, 53 * s, '600 ' + 20 * s + font, TXT);
+
+    const cy0 = 80 * s, rows = 7, rh = 38 * s, ch = rows * rh + 82 * s;
+    g.fillStyle = CARD; g.beginPath(); g.roundRect(M, cy0, MW, ch, 14 * s); g.fill();
+    if (board) {
+      let y = cy0 + 62 * s;
+      if (board.big != null) {
+        const bw = text(fmt(board.big), M + 22 * s, y, '600 ' + 56 * s + NUM, '#fff');
+        if (board.bigLabel) text(fit(board.bigLabel, MW - bw - 60 * s, '500 ' + 20 * s + font), M + 22 * s + bw + 14 * s, y - 4 * s, '500 ' + 20 * s + font, DIM);
+        y += 16 * s;
+      }
+      (board.rows || []).slice(0, board.big != null ? rows - 1 : rows).forEach((r, i) => {
+        if (i || board.big != null) { g.fillStyle = LINE; g.fillRect(M + 16 * s, y, MW - 32 * s, 1); }
+        const vf = '600 ' + 19 * s + NUM, vw = r.value != null ? (g.font = vf, g.measureText(fmt(r.value)).width) : 0;
+        text(fit(r.name ?? '', MW * 0.55, '600 ' + 21 * s + MONO), M + 22 * s, y + rh * 0.68, '600 ' + 21 * s + MONO, TXT);
+        if (r.value != null) text(fmt(r.value), M + MW - 22 * s, y + rh * 0.68, vf, Y, 'right');
+        if (r.note) text(fit(r.note, MW * 0.4 - vw, '400 ' + 15 * s + font), M + MW - 34 * s - vw, y + rh * 0.68, '400 ' + 15 * s + font, DIM, 'right');
+        y += rh;
+      });
+    } else {
+      // no board: her still picture fills the card, under a slow breathing light
+      const r = Math.min(ch, MW) * 0.36;
+      g.fillStyle = `rgba(240,185,11,${0.05 + 0.05 * pulse})`; g.beginPath(); g.arc(M + MW / 2, cy0 + ch / 2, r + 26 * s, 0, 7); g.fill();
+      avatar(M + MW / 2, cy0 + ch / 2, r);
+    }
+
+    // her answer (or the invitation when quiet)
+    const by = cy0 + ch + 18 * s, bh = H - by - 22 * s;
+    g.fillStyle = 'rgba(240,185,11,.08)'; g.strokeStyle = 'rgba(240,185,11,.35)'; g.lineWidth = 1.5 * s;
+    g.beginPath(); g.roundRect(M, by, MW, bh, 14 * s); g.fill(); g.stroke();
+    avatar(M + 50 * s, by + 52 * s, 30 * s);
+    // voice bars under her picture
+    for (let i = 0; i < 5; i++) { const hgt = (4 + (say && t - sayAt < sayMs ? level * 26 * (0.5 + 0.5 * Math.sin(t / 90 + i * 1.7)) : 2)) * s; g.fillStyle = Y; g.fillRect(M + 32 * s + i * 8 * s, by + 104 * s - hgt / 2, 4 * s, hgt); }
+    const tx = M + 100 * s, tw = MW - 120 * s;
+    const live = say && t - sayAt < sayMs + 4000;
+    if (live) {
+      let y = by + 34 * s;
+      if (say.who) { const head = `回复 ${say.who}：${say.q || ''}`; g.font = '500 ' + 17 * s + font; text(wrap(head, tw, 1)[0], tx, y, '500 ' + 17 * s + font, Y); y += 32 * s; }
+      g.font = '600 ' + 22 * s + font;
+      for (const l of wrap(say.text, tw, say.who ? 3 : 4)) { text(l, tx, y, '600 ' + 22 * s + font, TXT); y += 32 * s; }
+    } else {
+      text(fit(`${NAME} 下播了，声音在线`, tw, '600 ' + 24 * s + font), tx, by + 40 * s, '600 ' + 24 * s + font, TXT);
+      text('币安活动、AI 科普，打在弹幕里', tx, by + 78 * s, '500 ' + 20 * s + font, Y);
+      text(fit(`${NAME} 用声音回你`, tw, '500 ' + 20 * s + font), tx, by + 110 * s, '500 ' + 20 * s + font, DIM);
+      const q = asked[asked.length - 1];
+      if (q && Date.now() - q.at < 120e3) text(wrap(`收到 ${q.who}：${q.q}`, tw, 1)[0], tx, by + 142 * s, '400 ' + 16 * s + font, DIM);
+    }
+
+    // ---- left (desktop): who this is and what to ask
+    const L = 34 * s, LW = (W - H) / 2 - 58 * s;
+    if (LW > 120 * s) {
+      avatar(L + 46 * s, 82 * s, 44 * s);
+      text(fit(NAME, LW - 70 * s, '600 ' + 26 * s + font), L + 104 * s, 76 * s, '600 ' + 26 * s + font, TXT);
+      text('下播陪聊中', L + 104 * s, 106 * s, '500 ' + 17 * s + font, GREEN);
+      let y = 176 * s;
+      text(fit(`可以问 ${NAME}`, LW, '500 ' + 16 * s + font), L, y, '500 ' + 16 * s + font, DIM); y += 34 * s;
+      for (const [a, b] of [['币安活动', '最新活动怎么参加'], ['AI 科普', 'Agent 是什么']]) {
+        text(a, L, y, '600 ' + 21 * s + font, Y); text(b, L, y + 26 * s, '400 ' + 16 * s + font, DIM); y += 66 * s;
+      }
+      text('点歌', L, y, '600 ' + 21 * s + font, Y); text('打“点歌 歌名”', L, y + 26 * s, '400 ' + 16 * s + font, DIM); y += 66 * s;
+      text('不聊买卖，不喊单', L, y + 4 * s, '400 ' + 15 * s + font, DIM);
+      if (nowSong) {
+        const ny = H - 170 * s;
+        text('正在放', L, ny, '400 ' + 15 * s + font, DIM);
+        const bars = 4; for (let i = 0; i < bars; i++) { const hgt = (6 + 10 * Math.abs(Math.sin(Date.now() / 260 + i * 1.3))) * s; g.fillStyle = GREEN; g.fillRect(L + 62 * s + i * 6 * s, ny - hgt + 2 * s, 3.5 * s, hgt); }
+        const tt = '《' + nowSong.title + '》'; g.font = '600 ' + 19 * s + font; let t2 = tt; while (g.measureText(t2).width > LW && t2.length > 3) t2 = t2.slice(0, -2) + '》';
+        text(t2, L, ny + 30 * s, '600 ' + 19 * s + font, TXT);
+        text(nowSong.by ? nowSong.by.slice(0, 10) + ' 点的' : (nowSong.artist || '').slice(0, 14), L, ny + 56 * s, '400 ' + 15 * s + font, nowSong.by ? Y : DIM);
+      }
+    }
+    // the right side (desktop) stays clear: Square puts its own account mark in the top right
+  }
+  setInterval(draw, 1000 / cfg.fps);
+
+  const stream = new MediaStream([c.captureStream(cfg.fps).getVideoTracks()[0], dest.stream.getAudioTracks()[0]]);
+  const type = ['video/webm;codecs=h264,opus', 'video/webm;codecs=vp8,opus', 'video/webm'].find(t => MediaRecorder.isTypeSupported(t));
+  const rec = new MediaRecorder(stream, { mimeType: type, videoBitsPerSecond: cfg.kbps * 1000, audioBitsPerSecond: 128000 });
+  rec.ondataavailable = e => e.data.size && e.data.arrayBuffer().then(b => ws.readyState === 1 && ws.send(b));
+  rec.start(500);
+  ws.send(JSON.stringify({ started: type }));
+}
+main().catch(e => log('failed', e.message || e));
+</script>

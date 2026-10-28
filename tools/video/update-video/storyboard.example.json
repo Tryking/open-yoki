@@ -1,0 +1,91 @@
+{
+  "_comment": "Example storyboard. Every text is a neutral placeholder: replace it with what actually changed today. Paths are relative to assets_dir. Format: see README.md.",
+  "output": "out/update.mp4",
+  "assets_dir": "assets",
+  "fps": 30,
+  "fonts": {"zh": null, "en": null},
+  "theme": {"bg": "#0C0C0C", "accent": "#F0B90B", "before": "#E84040", "after": "#3CC878"},
+  "mix": {"lufs": -14, "true_peak": -1.5, "duck": true, "voice_gain": 1.6},
+  "segments": [
+    {
+      "id": "open", "type": "title_list", "dur": 3.0,
+      "title": {"zh": "今天的更新", "en": "What's new today"},
+      "items": [
+        {"zh": "开播时读弹幕不再卡住", "en": "Chat reader no longer stalls at showtime"},
+        {"zh": "新小动作：被夸会害羞", "en": "New bit: she gets shy when you compliment her"},
+        {"zh": "记得常来的观众", "en": "Remembers the regulars"},
+        {"zh": "新玩法：直播间抽奖", "en": "New: giveaway rounds in the live room"}
+      ],
+      "music": {"file": "music/intro.mp3", "ss": 0, "vol": 0.45, "fade_in": 0.2, "fade_out": 0.3},
+      "sfx": [{"file": "sfx/click.wav", "at": 0.3, "repeat": 4, "every": 0.25, "vol": 0.9}]
+    },
+    {
+      "id": "stats", "type": "number_cards", "dur": 4.2,
+      "title": {"zh": "近 7 天", "en": "Last 7 days"},
+      "cards": [
+        {"value": 12.4, "decimals": 1, "unit": "K", "label": {"zh": "浏览", "en": "views"}, "delta": "+48%"},
+        {"value": 860, "label": {"zh": "新粉丝", "en": "new followers"}, "delta": "+21%"},
+        {"value": 18, "unit": "h", "label": {"zh": "直播", "en": "hours live"}, "delta": "+35%"}
+      ],
+      "note": {"zh": "示例数字，换成你后台的真实数据", "en": "Example numbers: use the real ones from your dashboard"},
+      "footer": {"zh": "数据来自平台创作者后台", "en": "From the platform's creator dashboard"},
+      "sfx": [{"file": "sfx/confirm.wav", "at": 1.2, "repeat": 3, "every": 0.1, "vol": 0.4}]
+    },
+    {
+      "id": "before", "type": "clip", "src": "clips/before.mp4", "start": 0, "dur": 6.2, "tone": "before",
+      "banner": {"tag": "改前 Before", "zh": "开播 20 分钟，她看不到弹幕", "en": "20 minutes into the show, she couldn't see chat"},
+      "callouts": [
+        {"at": 0.6, "x": 60, "y": 300, "w": 420,
+         "lines": [{"zh": "读弹幕的页面卡住了", "en": "The chat reader froze"}], "highlight": "20:00-20:20"},
+        {"at": 1.6, "x": 1440, "y": 560, "w": 440,
+         "lines": [{"zh": "她以为没人说话", "en": "She thought nobody was talking"}]}
+      ],
+      "marks": [{"at": 1.0, "box": [0.05, 0.62, 0.95, 0.92], "label": "chat: empty"}],
+      "subs": [{"at": 0.2, "zh": "", "en": "\"Quiet night. Just me and this chart.\""}],
+      "music": {"file": "music/sad.mp3", "ss": 0, "vol": 0.8, "fade_in": 0.2, "fade_out": 0.2},
+      "sfx": [{"file": "sfx/error.wav", "at": 0.6, "vol": 0.6}, {"file": "sfx/error.wav", "at": 1.6, "vol": 0.5}]
+    },
+    {
+      "id": "cut", "type": "stinger", "dur": 0.8, "zh": "改。", "en": "Fixed.",
+      "music": {"file": "music/upbeat.mp3", "ss": 0, "vol": 0.35, "delay": 0.4, "fade_in": 0.1, "fade_out": 0.3},
+      "sfx": [{"file": "sfx/boom.wav", "at": 0.02, "vol": 0.9}, {"file": "sfx/whoosh.wav", "at": 0.6, "vol": 0.5}]
+    },
+    {
+      "id": "after", "type": "clip", "src": "clips/after.mp4", "start": 0, "dur": 6.6, "tone": "after",
+      "banner": {"tag": "改后 After", "zh": "读到弹幕，挨个叫名字回", "en": "Chat is back: she answers everyone by name"},
+      "callouts": [
+        {"at": 0.8, "x": 1440, "y": 300, "w": 450, "tone": "after",
+         "lines": [{"zh": "一分半钟回了 6 个人", "en": "6 viewers answered in 90 seconds"}], "highlight": "Real replay"},
+        {"at": 2.6, "x": 30, "y": 560, "w": 470, "tone": "after",
+         "lines": [{"zh": "下播后页面留在直播间", "en": "Stays in the room between shows"},
+                   {"zh": "卡住马上报警", "en": "Alerts right away if it stalls"}]}
+      ],
+      "subs": [{"at": 0.2, "zh": "欢迎回来！一个一个来～", "en": "\"Welcome back! One at a time~\""}],
+      "sfx": [{"file": "sfx/confirm.wav", "at": 0.8, "vol": 0.6}, {"file": "sfx/confirm.wav", "at": 2.6, "vol": 0.6}]
+    },
+    {
+      "id": "giveaway", "type": "image", "src": "images/screenshot.png", "dur": "auto", "pad": 0.7, "tone": "accent",
+      "label": {"zh": "直播间里的抽奖（测试截图）", "en": "The giveaway in the live room (test screenshot)"},
+      "banner": {"tag": "新 New", "zh": "直播间抽奖", "en": "Giveaway rounds, live"},
+      "list": [
+        {"zh": "每晚 3 轮，每 20 分钟一轮", "en": "3 rounds a night, every 20 minutes"},
+        {"zh": "先关注才算", "en": "Follow first to take part"},
+        {"zh": "中奖名单直播里念", "en": "Winners are read out on stream"}
+      ],
+      "list_at": 0.6, "every": 1.2,
+      "voice": [{"file": "voice/line1.wav", "at": 0.3, "tempo": 1.0}],
+      "subs": [{"at": 0.4, "zh": "抽奖开始啦！先关注我再参加哦～", "en": "\"Giveaway time! Follow me first, then jump in~\""}],
+      "music": {"file": "music/bright.mp3", "ss": 0, "vol": 0.35, "fade_in": 0.15, "fade_out": 1.2},
+      "sfx": [{"file": "sfx/click.wav", "at": 0.6, "repeat": 3, "every": 1.2, "vol": 0.8}]
+    },
+    {
+      "id": "end", "type": "end", "dur": 4.5, "avatar": "images/avatar.png",
+      "lines": [
+        {"zh": "每晚 8 点开播", "en": "Live every night at 12:00 UTC", "style": "accent"},
+        {"zh": "在直播平台搜「你的主播名」", "en": "Search \"Your Host\" on the platform", "style": "normal"},
+        {"zh": "先关注，开播提醒你", "en": "Follow to get a ping when she goes live", "style": "small"}
+      ],
+      "sfx": [{"file": "sfx/confirm.wav", "at": 0.15, "vol": 0.6}]
+    }
+  ]
+}

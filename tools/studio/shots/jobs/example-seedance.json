@@ -1,0 +1,9 @@
+{
+  "name": "example-seedance",
+  "via": "fal-seedance",
+  "prompt": "The person from image 1 sits at a desk in a cozy night streaming room, waist-up, fixed camera at eye level. First frame: hands on the desk, looking at the camera. Action: she smiles and gives a small wave. Last frame: hand back on the desk, closed-mouth smile. Photorealistic, sharp face, no text.",
+  "duration": 5,
+  "aspect": "16:9",
+  "images": ["../../character/example/face.png", "../../character/example/looks/daily.png"],
+  "sound": false
+}

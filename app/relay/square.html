@@ -1,0 +1,364 @@
+<!doctype html>
+<!-- The Binance Square feed: a headless browser opens this page on 127.0.0.1 only. It joins our own
+     Volcano room invisibly, draws her picture plus the line she is saying onto a canvas, mixes her voice into one audio
+     track and sends MediaRecorder chunks back over a WebSocket; server/square.mjs pushes them to Square over RTMP.
+     Never served on the public site. -->
+<meta charset="utf-8">
+<title>square feed</title>
+<body style="margin:0;background:#000">
+<canvas id="c"></canvas>
+<!-- On screen, not parked at -4000px: off screen, Chrome counts almost every frame of hers as dropped. The page is never shown. -->
+<div id="v" style="position:absolute;left:0;top:0;width:720px;height:1280px"></div>
+<img id="still" style="display:none">
+<script src="/vendor/volc-rtc.min.js"></script>
+<script>
+let ws, rec, caption = '', who = '', head = '', capAt = 0, board = [], think = null, thoughts = [], focus = null, fx = null, playSong = () => {}, playClip = () => {}, playWhole = s => { earlySong = s; }, earlySong = null, playSting = () => {}, nowSong = null;
+const log = (...a) => { try { ws?.readyState === 1 && ws.send(JSON.stringify({ log: a.join(' ') })); } catch {} };
+
+async function main() {
+  const cfg = await (await fetch('/config')).json();
+  const W = cfg.width, H = cfg.height;
+  // Host-specific text comes from the server's /config (her name, a one-line tagline, her time zone); nothing is
+  // written into this page.
+  const NAME = cfg.name || '', TAGLINE = cfg.tagline || '', TZ = Number.isFinite(cfg.tz) ? cfg.tz : 8;
+  const TZ_LABEL = cfg.tzLabel || ('UTC' + (TZ >= 0 ? '+' : '') + TZ);
+  const c = document.getElementById('c'); c.width = W; c.height = H;
+  const g = c.getContext('2d');
+  const still = document.getElementById('still'); still.src = cfg.still || '';
+  ws = new WebSocket(`ws://${location.host}/media`);
+  ws.binaryType = 'arraybuffer';
+  ws.onmessage = e => { const m = JSON.parse(e.data); if ('caption' in m) { caption = m.caption || ''; who = m.who || ''; head = m.head || (who ? '回复 ' + who : ''); capAt = Date.now(); if (think) { thoughts.push(think); thoughts = thoughts.slice(-3); } think = m.think ? { ...m.think, at: new Date(capAt + TZ * 3600e3).toISOString().slice(11, 16) } : null; } if (m.fx) startFx(m.fx); if (m.clip) playClip(m.clip); if (m.board) board = m.board; if (m.focus) focus = m.focus; if (m.bgm) playSong(m.bgm); if (m.song) playWhole(m.song); if (m.sting) playSting(m.sting); };
+  await new Promise((res, rej) => { ws.onopen = res; ws.onerror = rej; });
+  // The 16:9 feed's own faces (server/square.mjs FONTS); without them it falls back to the system face.
+  for (const [n, u] of [['lh-kai', '/font/kai.ttf'], ['lh-num', '/font/num.ttf']]) try { const f = new FontFace(n, `url(${u})`); await f.load(); document.fonts.add(f); } catch (e) { log('font', n, e.message || e); }
+
+  // One audio track from the start (silence until her voice arrives), so the recorder never has to restart.
+  const ac = new AudioContext();
+  const dest = ac.createMediaStreamDestination();
+  const hum = ac.createConstantSource(); const mute = ac.createGain(); mute.gain.value = 0; hum.connect(mute).connect(dest); hum.start();
+  // Songs she puts on play under her voice, one at a time.
+  let song = null;
+  const songGain = ac.createGain(); songGain.gain.value = 0.32; songGain.connect(dest);
+  playSong = async url => {
+    try {
+      const buf = await ac.decodeAudioData(await (await fetch(url)).arrayBuffer());
+      try { song?.stop(); } catch {}
+      song = ac.createBufferSource(); song.buffer = buf; song.connect(songGain); song.start();
+      log('song', url);
+    } catch (e) { log('song failed', e.message || e); }
+  };
+  // Whole songs under her voice: her live voice is watched by a level meter, and while she talks the song dips to about
+  // 30% of her level so the words stay clear; between lines it comes back a little under her. The server picks the
+  // next song when this one ends.
+  const BED = 0.40, DIP = 0.133;
+  const wholeGain = ac.createGain(); wholeGain.gain.value = BED; wholeGain.connect(dest);
+  let whole = null, dipped = false, quietSince = 0;
+  playWhole = async s => {
+    try {
+      const buf = await ac.decodeAudioData(await (await fetch(s.url)).arrayBuffer());
+      try { if (whole) { whole.onended = null; whole.stop(); } } catch {}
+      const src = ac.createBufferSource(); src.buffer = buf; src.connect(wholeGain);
+      src.onended = () => { if (whole === src) ws.send(JSON.stringify({ songEnded: s.id })); };
+      whole = src; nowSong = { ...s, at: Date.now() }; src.start(); log('song', s.id);
+    } catch (e) { log('song failed', s.id, e.message || e); ws.send(JSON.stringify({ songEnded: s.id })); }
+  };
+  // a song that came before the audio was ready (the server sends the current one as the page connects) plays now
+  if (earlySong) { playWhole(earlySong); earlySong = null; }
+  const duck = on => { if (on === dipped) return; dipped = on; const t = ac.currentTime; wholeGain.gain.cancelScheduledValues(t); wholeGain.gain.setValueAtTime(wholeGain.gain.value, t); wholeGain.gain.linearRampToValueAtTime(on ? DIP : BED, t + (on ? 0.25 : 0.9)); };
+  // A short sound over everything (relay/sfx/<name>.mp3: whoosh, cheer, gasp, boom). The files are optional and not
+  // shipped; a missing one is remembered and stays silent.
+  const stings = {};
+  playSting = async k => {
+    if (stings[k] === false) return;
+    try {
+      const r = await fetch('/sfx/' + k + '.mp3');
+      if (!r.ok) { stings[k] = false; return; }
+      stings[k] ||= await ac.decodeAudioData(await r.arrayBuffer());
+      const src = ac.createBufferSource(), a = ac.createGain(); a.gain.value = 0.3; src.buffer = stings[k]; src.connect(a).connect(dest); src.start();
+    } catch (e) { log('sting failed', k, e.message || e); }
+  };
+  // Her voice reaches this page about 0.1 s before her mouth moves (measured 0-0.2 s), so it waits that long.
+  const VOICE_LAG_S = 0.1;
+  const wired = new WeakSet();
+  // Chrome hands Web Audio silence from a remote WebRTC stream unless a media element is also playing it (Square then
+  // gets her picture but no voice), so each stream gets its own muted <audio> that plays, plus a level meter in the log.
+  const voiceMeter = ac.createAnalyser(), outMeter = ac.createAnalyser();
+  ac.createMediaStreamSource(dest.stream).connect(outMeter);
+  const wireAudio = () => { for (const el of document.querySelectorAll('audio, video')) { const s = el.srcObject; if (s && s.getAudioTracks().length && !wired.has(s)) { wired.add(s); const keep = new Audio(); keep.muted = true; keep.srcObject = s; keep.play().catch(() => {}); const src = ac.createMediaStreamSource(s); const lag = ac.createDelay(1); lag.delayTime.value = VOICE_LAG_S; src.connect(lag).connect(dest); src.connect(voiceMeter); log('voice wired'); } } };
+  const rms = an => { const b = new Float32Array(an.fftSize); an.getFloatTimeDomainData(b); return Math.sqrt(b.reduce((t, x) => t + x * x, 0) / b.length); };
+  let peakV = 0, peakO = 0;
+  setInterval(() => { const v = rms(voiceMeter); peakV = Math.max(peakV, v); peakO = Math.max(peakO, rms(outMeter)); if (ac.state !== 'running') ac.resume();
+    if (v > 0.012) { quietSince = 0; duck(true); } else if (dipped) { quietSince ||= Date.now(); if (Date.now() - quietSince > 700) duck(false); } }, 100);
+  setInterval(() => { log('audio', ac.state, 'voice', peakV.toFixed(3), 'out', peakO.toFixed(3)); peakV = peakO = 0; }, 20000);
+
+  // Wrap a caption into lines that fit the band; keep the last n.
+  const wrap = (t, max, n = 3) => { const out = []; let line = ''; for (const ch of t) { if (g.measureText(line + ch).width > max) { out.push(line); line = ch; } else line += ch; } if (line) out.push(line); return out.slice(-n); };
+  const font = 'px "Noto Sans CJK SC", "WenQuanYi Zen Hei", "PingFang SC", sans-serif';
+  // Caption box: what she is saying now, in the room's yellow-on-night style, its bottom at `bottom`; fades 8 s after the line.
+  function capBox(x, w, bottom, size, n) {
+    if (!caption || Date.now() - capAt >= 8000) return;
+    g.font = '600 ' + size + font;
+    const lines = wrap(caption, w - size * 1.2, n), lh = size * 1.45, hh = head ? lh * 0.8 : 0;
+    const top = bottom - lines.length * lh - hh;
+    g.fillStyle = 'rgba(9,11,16,.72)';
+    g.beginPath(); g.roundRect(x, top - size * 0.6, w, lines.length * lh + size * 0.8 + hh, size * 0.5); g.fill();
+    let y = top + size * 0.4;
+    if (head) { g.font = '500 ' + Math.round(size * 0.72) + font; g.fillStyle = '#f0b90b'; g.fillText(head.length > 30 ? head.slice(0, 30) + '…' : head, x + size * 0.6, y); y += lh * 0.8; g.font = '600 ' + size + font; }
+    g.fillStyle = '#ece6d8';
+    for (const l of lines) { g.fillText(l, x + size * 0.6, y + size * 0.35); y += lh; }
+  }
+  // 16:9: Square's phone app shows the middle square, its desktop page the whole frame. Middle: her whole width (her
+  // wave reaches the edge of the picture), the thought behind the line and the line itself. Left (desktop): name, her
+  // local time and her last few thoughts. Right: the coin she is watching and the majors. The top right stays empty
+  // for Square's own account mark.
+  const KAI = 'px "lh-kai", ' + font.slice(3), NUM = 'px "lh-num", ' + font.slice(3);
+  const LAMP = '#f3e6c4', DIM = '#8c8577', Y = '#f0b90b', UP = '#0ecb81', DOWN = '#f6465d';
+  const comma = t => /^\d{4,}(\.\d+)?$/.test(t) ? t.replace(/^\d+/, d => d.replace(/\B(?=(\d{3})+$)/g, ',')) : t;
+  const local = t => new Date(t + TZ * 3600e3).toISOString().slice(11, 16);
+  const wrapAll = (t, max) => { const out = []; let line = ''; for (const ch of t) { if (line && g.measureText(line + ch).width > max) { out.push(line); line = ch; } else line += ch; } if (line) out.push(line); return out; };
+  const clip = (t, max) => { if (g.measureText(t).width <= max) return t; while (t && g.measureText(t + '…').width > max) t = t.slice(0, -1); return t + '…'; };
+  const text = (t, x, y, f, c, a = 'left') => { g.font = f; g.fillStyle = c; g.textAlign = a; g.fillText(t, x, y); return g.measureText(t).width; };
+  function wide(pw) {
+    const s = H / 720, x0 = (W - pw) / 2, cx = W / 2;
+    // her edges fade into the black that Square's desktop page puts around the picture; the bottom darkens under the words
+    for (const [a, b] of [[x0, x0 + 24 * s], [x0 + pw, x0 + pw - 24 * s]]) { const gr = g.createLinearGradient(a, 0, b, 0); gr.addColorStop(0, '#000'); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = gr; g.fillRect(Math.min(a, b), 0, 24 * s, H); }
+    const gb = g.createLinearGradient(0, H * 0.58, 0, H); gb.addColorStop(0, 'rgba(0,0,0,0)'); gb.addColorStop(0.43, 'rgba(0,0,0,.55)'); gb.addColorStop(1, 'rgba(0,0,0,.9)');
+    g.fillStyle = gb; g.fillRect(0, H * 0.58, W, H * 0.42);
+    g.textBaseline = 'top';
+
+    // left: who she is, then what she has been thinking (oldest faintest)
+    const L = 30 * s, LW = 190 * s;
+    g.font = '800 ' + 40 * s + font;
+    text(clip(NAME, LW + 20 * s), L, 30 * s, '800 ' + 40 * s + font, Y);
+    if (TAGLINE) { g.font = '500 ' + 15 * s + font; text(clip(TAGLINE, LW + 20 * s), L, 84 * s, '500 ' + 15 * s + font, DIM); }
+    const bw = text(TZ_LABEL, L, 113 * s, '500 ' + 14 * s + font, DIM);
+    text(local(Date.now()), L + bw + 6 * s, 108 * s, '600 ' + 24 * s + NUM, LAMP);
+    // the song on now and how to ask for one
+    if (nowSong) { const t = '♪ ' + (nowSong.title.length > 11 ? nowSong.title.slice(0, 11) + '…' : nowSong.title) + (nowSong.by ? '（' + nowSong.by.slice(0, 6) + ' 点的）' : ''); text(t, L, 142 * s, '500 ' + 14 * s + font, LAMP); text('打“点歌 歌名”点歌', L, 162 * s, '400 ' + 12 * s + font, DIM); }
+    const past = thoughts.slice(-3);
+    if (past.length) {
+      const hw = text('她心里想的', L, 186 * s, '600 ' + 18 * s + font, Y);
+      text('嘴上不说', L + hw + 8 * s, 190 * s, '400 ' + 13 * s + font, DIM);
+      const fade = [0.32, 0.5, 0.72].slice(-past.length);
+      let y = 222 * s; const top = y;
+      past.forEach((t, i) => {
+        g.globalAlpha = fade[i];
+        g.fillStyle = Y; g.beginPath(); g.arc(L + 3.5 * s, y + 8 * s, 3.5 * s, 0, 7); g.fill();
+        const tw = text(t.at, L + 18 * s, y, '600 ' + 15 * s + NUM, DIM);
+        if (t.mood) text(t.mood, L + 18 * s + tw + 6 * s, y + 1 * s, '600 ' + 14 * s + font, Y);
+        g.font = 23 * s + KAI;
+        const ls = wrapAll(t.text, LW - 18 * s);
+        ls.slice(0, 2).forEach((l, j) => text(j === 1 && ls.length > 2 ? clip(l + '…', LW - 18 * s) : l, L + 18 * s, y + 24 * s + j * 32 * s, 23 * s + KAI, LAMP));
+        y += 24 * s + Math.min(2, ls.length) * 32 * s + 22 * s;
+      });
+      g.globalAlpha = 1;
+      g.fillStyle = 'rgba(240,185,11,.35)'; g.fillRect(L + 3 * s, top + 12 * s, 1 * s, Math.max(0, y - top - 50 * s));
+    }
+
+    // right: the coin she is watching, its last day of hourly candles and what she said about it, then the majors
+    const R = W - 28 * s - 200 * s, RW = 200 * s;
+    let ry = 516 * s;
+    if (focus) {
+      text('她在盯', R, 84 * s, '600 ' + 17 * s + font, Y);
+      const big = focus.coin.length > 5 ? 56 : 84;
+      text(focus.coin, R, 108 * s, '600 ' + big * s + NUM, '#fff');
+      const pw2 = text(comma(focus.price), R, 200 * s, '600 ' + 38 * s + NUM, '#fff');
+      text(focus.pct, R + pw2 + 12 * s, 210 * s, '600 ' + 26 * s + NUM, focus.up ? UP : DOWN);
+      text('24 小时', R, 246 * s, '400 ' + 13 * s + font, DIM);
+      const k = focus.k || [];
+      if (k.length >= 6) {
+        const hi = Math.max(...k.map(c => c[1])), lo = Math.min(...k.map(c => c[2])), ky = 270 * s, kh = 100 * s, step = RW / k.length;
+        const yv = v => ky + (hi === lo ? kh / 2 : (hi - v) / (hi - lo) * kh);
+        k.forEach(([o, h, l, c], i) => {
+          const x = R + i * step + step / 2; g.fillStyle = c >= o ? UP : DOWN;
+          g.fillRect(x - 0.5 * s, yv(h), 1 * s, Math.max(1, yv(l) - yv(h)));
+          g.fillRect(x - step * 0.3, Math.min(yv(o), yv(c)), step * 0.6, Math.max(1.5 * s, Math.abs(yv(o) - yv(c))));
+        });
+      }
+      if (focus.view) {
+        text('她怎么看', R, 388 * s, '400 ' + 13 * s + font, DIM);
+        g.font = '500 ' + 20 * s + font;
+        wrapAll(focus.view, RW).slice(0, 3).forEach((l, j) => text(l, R, 410 * s + j * 29 * s, '500 ' + 20 * s + font, '#fff'));
+      }
+    } else if (board.length) { text('她在看的盘', R, 84 * s, '600 ' + 17 * s + font, Y); ry = 120 * s; }
+    for (const b of board.filter(b => b.coin !== focus?.coin).slice(0, focus ? 4 : 6)) {
+      g.fillStyle = 'rgba(255,255,255,.08)'; g.fillRect(R, ry, RW, 1 * s);
+      text(b.coin, R, ry + 9 * s, '600 ' + 21 * s + NUM, LAMP);
+      text(comma(b.price), R + RW - 70 * s, ry + 10 * s, '600 ' + 20 * s + NUM, DIM, 'right');
+      text(b.pct, R + RW, ry + 10 * s, '600 ' + 20 * s + NUM, b.up ? UP : DOWN, 'right');
+      ry += 40 * s;
+    }
+
+    // middle: the thought behind the line, then the line, both inside the square the phone app shows
+    if (caption && Date.now() - capAt < 8000) {
+      g.shadowColor = 'rgba(0,0,0,.9)'; g.shadowBlur = 10 * s; g.shadowOffsetY = 2 * s;
+      const CW = 680 * s, size = 31 * s, lh = size * 1.38, pre = who ? '@' + who + ' ' : '';
+      g.font = '600 ' + size + font;
+      let ls = wrapAll(pre + caption, CW);
+      if (ls.length > 3) { ls = ls.slice(0, 3); ls[2] = clip(ls[2] + '…', CW); }
+      let y = H - 22 * s - ls.length * lh;
+      ls.forEach((l, j) => {
+        const lw = g.measureText(l).width; let x = cx - lw / 2;
+        if (j === 0 && pre && l.startsWith(pre)) { text(pre, x, y + j * lh, '600 ' + size + font, Y); x += g.measureText(pre).width; l = l.slice(pre.length); }
+        text(l, x, y + j * lh, '600 ' + size + font, '#fff');
+        g.font = '600 ' + size + font;
+      });
+      if (think) {
+        y -= 44 * s;
+        g.font = 29 * s + KAI;
+        const t = clip(think.text, CW - 70 * s), tw = g.measureText(t).width, chip = 50 * s, x = cx - (tw + chip + 12 * s) / 2;
+        g.shadowBlur = 0; g.fillStyle = LAMP; g.beginPath(); g.roundRect(x, y + 6 * s, chip, 24 * s, 3 * s); g.fill();
+        text('心里', x + chip / 2, y + 9 * s, '500 ' + 15 * s + font, '#000', 'center');
+        g.shadowBlur = 10 * s; text(t, x + chip + 12 * s, y, 29 * s + KAI, LAMP);
+      }
+      if (head && !who) text(clip(head, CW), cx, y - 30 * s, '500 ' + 18 * s + font, Y, 'center');
+      g.shadowColor = 'transparent'; g.shadowBlur = 0; g.shadowOffsetY = 0;
+    }
+    g.textBaseline = 'alphabetic'; g.textAlign = 'left';
+  }
+  // Little effects with her cute moves: hearts float up from her chest with 比心, one big heart comes off her lips with
+  // 飞吻, a sparkle by her eye with 眨眼, small pink hearts by her cheeks with 捂脸. They start half a second after the
+  // line, about when her video starts the move. pic = where her picture is drawn.
+  function startFx(kind) {
+    if (!FX[kind]) return;
+    const at = performance.now() + 500;
+    fx = { kind, at, parts: Array.from({ length: FX[kind][0] }, (_, i) => ({ dx: Math.random() * 2 - 1, delay: i * 120 + Math.random() * 90, size: 0.6 + Math.random() * 0.7, sway: Math.random() * 6.28, c: ['#ff4d7d', '#ff8fab', '#ff4d7d', '#f0b90b'][i % 4] })) };
+  }
+  function heartAt(x, y, r, c, a) {
+    g.globalAlpha = Math.max(0, Math.min(1, a)); g.fillStyle = c;
+    g.beginPath(); g.moveTo(x, y + r * 0.9);
+    g.bezierCurveTo(x - r * 1.6, y - r * 0.15, x - r * 0.65, y - r * 1.45, x, y - r * 0.5);
+    g.bezierCurveTo(x + r * 0.65, y - r * 1.45, x + r * 1.6, y - r * 0.15, x, y + r * 0.9);
+    g.fill(); g.globalAlpha = 1;
+  }
+  function drawFx() {
+    if (!fx || !pic.w) return;
+    const t = performance.now() - fx.at, s = Math.min(W, H) / 720, cx = pic.x + pic.w / 2;
+    if (t > FX[fx.kind][1] + 1500) { fx = null; return; }
+    if (t < 0) return;
+    g.save(); g.shadowColor = 'rgba(255,77,125,.55)'; g.shadowBlur = 14 * s;
+    const fade = p => (p < 0.15 ? p / 0.15 : 1 - (p - 0.15) / 0.85);
+    // her face is the middle third of the picture between 0.2 and 0.45 of its height: the hearts go round it, never over it
+    if (fx.kind === 'heart' || fx.kind === 'shy') {
+      const shy = fx.kind === 'shy';
+      fx.parts.forEach((q, i) => {
+        const p = (t - q.delay) / (shy ? 1500 : 1800);
+        if (p <= 0 || p >= 1) return;
+        const side = i % 2 ? 1 : -1, e = 1 - (1 - p) * (1 - p);
+        const x = shy ? cx + side * pic.w * (0.25 + 0.03 * q.size) : cx + side * pic.w * (0.07 + (0.2 + 0.13 * q.size) * e);
+        const y = shy ? pic.y + pic.h * (0.37 - 0.08 * p) : pic.y + pic.h * (0.6 - 0.36 * p);
+        heartAt(x + Math.sin(q.sway + p * 6) * 6 * s, y, (shy ? 11 + 6 * q.size : 12 + 10 * q.size) * s * (0.7 + 0.5 * p), shy ? '#ff8fab' : q.c, fade(p));
+      });
+    } else if (fx.kind === 'kiss') {
+      const p = Math.min(1, t / 1200), e = 1 - (1 - p) * (1 - p);
+      if (p < 1) heartAt(cx + pic.w * (0.04 + 0.36 * e), pic.y + pic.h * (0.41 - 0.1 * e), (10 + 46 * e) * s, '#ff4d7d', 1 - p * p * p);
+      for (const q of fx.parts) {
+        const r = (t - 600 - q.delay) / 1500;
+        if (r <= 0 || r >= 1) continue;
+        heartAt(cx + pic.w * (0.3 + 0.1 * q.dx * r), pic.y + pic.h * (0.33 - 0.15 * r), (7 + 6 * q.size) * s, q.c, fade(r));
+      }
+    } else if (fx.kind === 'wink') {
+      const p = t / FX.wink[1];
+      if (p < 1) {
+        const x = cx + pic.w * 0.2, y = pic.y + pic.h * 0.26, r = 22 * s * Math.sin(p * Math.PI);
+        g.globalAlpha = Math.sin(p * Math.PI); g.fillStyle = '#fff6d0'; g.shadowColor = 'rgba(240,185,11,.8)';
+        g.beginPath(); g.moveTo(x, y - r); g.quadraticCurveTo(x, y, x + r, y); g.quadraticCurveTo(x, y, x, y + r); g.quadraticCurveTo(x, y, x - r, y); g.quadraticCurveTo(x, y, x, y - r); g.fill(); g.globalAlpha = 1;
+      }
+    }
+    g.restore();
+  }
+  // Her big moves (server/bigmoves.mjs): 5-second clips whose first and last frames are her live picture, dropped into
+  // relay/clips/<name>.mp4 (none are shipped; the server lists only the ones that exist). Loaded once; one plays over
+  // her picture with a short cross-fade at each end, silent (her voice comes after it).
+  const clips = {};
+  for (const k of cfg.clips || []) { const v = document.createElement('video'); v.src = `/clip/${k}.mp4`; v.muted = true; v.playsInline = true; v.preload = 'auto'; v.load(); clips[k] = v; }
+  let clipOn = null;
+  playClip = k => { const v = clips[k]; if (!v) return; try { v.currentTime = 0; } catch {} v.play().then(() => { clipOn = v; log('clip', k); }).catch(e => log('clip failed', k, e.message || e)); v.onended = () => { if (clipOn === v) clipOn = null; }; };
+  function drawClip() {
+    const v = clipOn;
+    if (!v || !pic.w || v.readyState < 2) return;
+    const d = v.duration || 5, t = v.currentTime, a = Math.min(1, t / 0.3, (d - t) / 0.4);
+    if (a <= 0) return;
+    const k = Math.max(pic.w / v.videoWidth, pic.h / v.videoHeight), w = v.videoWidth * k, h = v.videoHeight * k;
+    g.save(); g.beginPath(); g.rect(pic.x, pic.y, pic.w, pic.h); g.clip(); g.globalAlpha = a;
+    g.drawImage(v, pic.x + (pic.w - w) / 2, pic.y + (pic.h - h) / 2, w, h); g.restore();
+  }
+  function draw() {
+    const v = document.querySelector('#v video');
+    const src = v && v.readyState >= 2 && v.videoWidth ? v : still.complete && still.naturalWidth ? still : null;
+    g.fillStyle = W > H ? '#000' : '#090b10'; g.fillRect(0, 0, W, H);
+    const pw = H * 520 / 720;
+    if (src) {
+      const sw = src.videoWidth || src.naturalWidth, sh = src.videoHeight || src.naturalHeight;
+      const k = Math.max(W / sw, H / sh), dw = sw * k, dh = sh * k;
+      // A landscape feed: her picture at its full width, top aligned (the bottom of a portrait is mostly clothes).
+      if (W > H) { pic = { x: (W - pw) / 2, y: 0, w: pw, h: sh * pw / sw }; g.drawImage(src, pic.x, pic.y, pic.w, pic.h); }
+      else { pic = { x: (W - dw) / 2, y: (H - dh) / 2, w: dw, h: dh }; g.drawImage(src, pic.x, pic.y, pic.w, pic.h); }
+    }
+    drawClip();
+    drawFx();
+    wireAudio();
+    // Square's phone app crops a tall feed to the middle square, so in portrait the caption sits at
+    // the bottom of that square instead of the bottom of the frame; desktop still sees all of it.
+    if (W > H) wide(pw);
+    else { const size = Math.round(W / 22); capBox(W * 0.05, W * 0.9, (H + W) / 2 - W * 0.06, size, 3); }
+  }
+  // Frame counts every 20 s: how many new frames her video gave, how many times we drew and the longest gap between
+  // draws, plus what the RTC side reports receiving.
+  let vf = 0, draws = 0, lastDraw = 0, gapMax = 0, rtcStats = null, watched = null, lastQ = null, bad = 0;
+  setInterval(() => {
+    const v = watched, q = v?.getVideoPlaybackQuality?.();
+    // dropping more than one frame in ten for two windows running while RTC delivers ≥ 20: attach the player again
+    if (q && lastQ && q.totalVideoFrames > lastQ.totalVideoFrames) {
+      const dr = (q.droppedVideoFrames - lastQ.droppedVideoFrames) / (q.totalVideoFrames - lastQ.totalVideoFrames);
+      bad = dr > 0.1 && (rtcStats?.fps || 0) >= 20 ? bad + 1 : 0;
+    }
+    lastQ = q ? { droppedVideoFrames: q.droppedVideoFrames, totalVideoFrames: q.totalVideoFrames } : null;
+    if (bad >= 2 && cfg.publisher) setTimeout(() => attach(cfg.publisher, 'dropping frames'), 0);
+    log('frames video', (vf / 20).toFixed(1) + '/s', 'draws', (draws / 20).toFixed(1) + '/s', 'gapMax', gapMax + 'ms', 'size', v ? v.videoWidth + 'x' + v.videoHeight : '-', 'dropped', q ? q.droppedVideoFrames + '/' + q.totalVideoFrames : '-', 'rtc', rtcStats ? JSON.stringify(rtcStats).slice(0, 160) : '-');
+    vf = draws = gapMax = 0;
+  }, 20000);
+  // Draw once per new frame of hers (a fixed 25 Hz timer against her 24 fps repeated about one frame in four and skipped
+  // others, so her mouth stuttered). The timer only covers the still picture before her video arrives.
+  const paint = () => { const t = performance.now(); if (lastDraw) gapMax = Math.max(gapMax, Math.round(t - lastDraw)); lastDraw = t; draws++; draw(); };
+  const onFrame = v => v.requestVideoFrameCallback(() => { vf++; paint(); if (document.querySelector('#v video') === v) onFrame(v); else watched = null; });
+  setInterval(() => {
+    const v = document.querySelector('#v video');
+    if (v && v !== watched && v.requestVideoFrameCallback) { watched = v; onFrame(v); }
+    if (performance.now() - lastDraw > (clipOn ? 40 : 150)) paint();
+  }, 1000 / cfg.fps);
+
+  const V = window.VERTC.default || window.VERTC;
+  const engine = V.createEngine(cfg.app_id);
+  // After a short drop of her stream the page could keep dropping one frame in five (24 -> 15/s on Square) while RTC
+  // still delivered 24. The old player is cleared before the new one is attached, and if the picture still drops
+  // frames for 40 s while RTC is fine, the player is attached afresh.
+  const attach = (userId, why) => {
+    const box = document.getElementById('v');
+    for (const el of box.querySelectorAll('video')) { try { el.pause(); el.srcObject = null; } catch {} }
+    box.replaceChildren();
+    watched = null; lastQ = null; bad = 0;
+    engine.setRemoteVideoPlayer(0, { userId, renderDom: box, renderMode: 1 });
+    log('player attached', why);
+  };
+  engine.on(V.events.onUserPublishStream, ({ userId, mediaType }) => {
+    if (userId !== cfg.publisher) return;
+    log('her stream', mediaType);
+    attach(userId, 'stream ' + mediaType);
+    engine.subscribeStream(userId, 3).catch(e => log('subscribe', e.message || e));
+  });
+  if (V.events.onRemoteStreamStats) engine.on(V.events.onRemoteStreamStats, st => { const x = st?.videoStats || st; rtcStats = x && { fps: x.decoderOutputFrameRate ?? x.receivedFrameRate, render: x.renderOutputFrameRate, kbps: x.receivedKBitrate, w: x.width, h: x.height, loss: x.videoLossRate }; });
+  engine.on(V.events.onUserUnpublishStream, ({ userId }) => userId === cfg.publisher && log('her stream gone'));
+  await engine.setUserVisibility(false);
+  await engine.joinRoom(cfg.token, cfg.room_id, { userId: cfg.user_id }, { isAutoPublish: false, isAutoSubscribeAudio: true, isAutoSubscribeVideo: true });
+  log('in room', cfg.room_id);
+
+  const stream = new MediaStream([c.captureStream(cfg.fps).getVideoTracks()[0], dest.stream.getAudioTracks()[0]]);
+  const type = ['video/webm;codecs=h264,opus', 'video/webm;codecs=vp8,opus', 'video/webm'].find(t => MediaRecorder.isTypeSupported(t));
+  rec = new MediaRecorder(stream, { mimeType: type, videoBitsPerSecond: cfg.kbps * 1000, audioBitsPerSecond: 128000 });
+  rec.ondataavailable = e => e.data.size && e.data.arrayBuffer().then(b => ws.readyState === 1 && ws.send(b));
+  rec.start(500);
+  ws.send(JSON.stringify({ started: type }));
+}
+main().catch(e => { log('failed', e.message || e); ws?.readyState === 1 && ws.send(JSON.stringify({ ended: 'failed ' + (e.message || e) })); });
+</script>

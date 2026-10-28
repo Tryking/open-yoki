@@ -1,0 +1,13 @@
+# Linux: after-live clipper, one run. Installed as a *user* unit by install-systemd.sh, which replaces @CLIPS_DIR@.
+[Unit]
+Description=open-yoki after-live clips
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+Environment=OPEN_YOKI_CLIPS_DIR=@CLIPS_DIR@
+Environment=OPEN_YOKI_CLIPS_STATE=%h/.open-yoki-clips
+ExecStart=/bin/bash @CLIPS_DIR@/run.sh
+Nice=10
+IOSchedulingClass=idle
