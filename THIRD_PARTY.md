@@ -19,3 +19,12 @@ The Cubism Framework included in that display bundle and the operator-supplied C
 [Live2D SDK licensing](https://www.live2d.com/en/sdk/license/).
 Character models, textures, motions and expressions require their own permission. The optional runtime and model
 directories are Git-ignored; see [local provider setup](docs/local-providers.md).
+
+The optional Simli browser bundle is built locally with `npm run build:simli` from the pinned
+`simli-client@3.2.0` npm package (MIT) and its locked dependencies, including livekit-client (Apache-2.0).
+Generated legal comments and the complete bundled-package license texts are retained under
+`app/public/vendor/simli/`. The generated bundle is Git-ignored. Simli's hosted service and avatar assets
+remain subject to their own terms; this project's MIT license does not grant cloud-service access.
+The build applies a source-checksummed compatibility patch to SDK 3.2.0 to disable automatic reconnects
+and dispose session resources; the upstream MIT license is retained. New SDK versions require review.
+See [Simli setup](docs/simli.md).

@@ -2,7 +2,7 @@
 // Square feed and the host herself (mouth, voice, avatar, heart). Which host is `IDOL=<folder>` under idols/
 // (default example). Each route (model, voice, avatar, chat) keeps its own status and fails on its own: a dead voice
 // key never stops the chat, a dead model never stops the picture.
-//   AVATAR=mock|vidu|live2d  cloud video, a local Live2D model, or a still picture
+//   AVATAR=mock|vidu|live2d|simli  cloud video, a local Live2D model, or a still picture
 //   ON_AIR=on|off     override the host's schedule (on for local testing)
 //   MODE=show|test    show (default) runs the real schedule; test forces her on air and opens /api/test/* controls
 // Every key comes from the environment (see .env.example); nothing is read from key files here.
@@ -15,6 +15,7 @@ import { createWorld, MOODS, whoOf } from './world.mjs';
 import { createBrain, diaryPrompt, fitLength, takeInner } from './brain.mjs';
 import { createAvatar } from './avatar.mjs';
 import { createReplyProvider } from './model-provider.mjs';
+import { createSimliService, isLocalSimliRequest, SimliError } from './simli.mjs';
 import { createFiller } from './filler.mjs';
 import { createHeart, claudeRunner, fallbackRunner } from './heart.mjs';
 import { dsRunner } from './heartds.mjs';
@@ -141,6 +142,7 @@ export async function start(env = process.env) {
   const room = env.AVATAR === 'vidu' && env.WATCH !== 'relay' && rtcApp && rtcKey ? createVolcRoom({ appId: rtcApp, appKey: rtcKey, roomId: env.RTC_ROOM || `lh-${String(idol.short || idol.id).toLowerCase()}-${mode}` }) : null;
   let heardAt = Date.now();              // last time anyone in the room said something; a long quiet lets her drift off
   const avatar = createAvatar({ idol, kind: env.AVATAR || 'mock', voice, status, env, room, lookDir: path.join(ROOT, 'public', 'art', idol.id, 'looks'), quiet: () => Date.now() - heardAt });
+  const simli = avatar.kind === 'simli' ? createSimliService({ env }) : null;
   // Binance Square feed (square.mjs): on once <data>/square.json holds Square's RTMP address and key.
   const chrome = env.SQUARE_CHROME || env.CHROMIUM_PATH || (fs.existsSync('/opt/google/chrome/chrome') ? '/opt/google/chrome/chrome' : undefined);
   // Square's own count of her room and who walks in (POST /api/square/room).
@@ -259,7 +261,7 @@ export async function start(env = process.env) {
   let openPending = false;   // on air, hello not said yet (keepOpen)
   const schedule = createSchedule({ windows: idol.schedule, tz, force: env.ON_AIR || (mode === 'test' ? 'on' : null), extra: extraShow });
 
-  // One line: the subtitle goes out to every page at once, the avatar performs it (mock/live2d: the page plays the mp3 and the
+  // One line: the subtitle goes out to every page at once, the avatar performs it (mock/live2d/simli: the page plays the mp3 and the
   // action effect; vidu: the line streams into the RTC picture), then a short breath before the next one.
   async function speak(line, e) {
     const id = randomBytes(6).toString('hex');
@@ -277,7 +279,7 @@ export async function start(env = process.env) {
   }
   async function say(line, e, id) {
     const said = plainText(line.text);
-    if (avatar.kind === 'mock' || avatar.kind === 'live2d') {
+    if (avatar.kind === 'mock' || avatar.kind === 'live2d' || avatar.kind === 'simli') {
       const r = await avatar.perform({ ...line, text: said, id, withVoice: live.viewers > 0 });
       world.say({ text: line.text, face: line.face, action: line.action, tone: line.tone, bgm: line.bgm, seen: seenOf(e), audio: r.audio, durationMs: r.durationMs, kind: e.kind, replyTo: e.kind === 'chat' ? e.chatId : null });
       await sleep(r.durationMs + (r.audio ? 1200 : 0));
@@ -620,6 +622,22 @@ export async function start(env = process.env) {
     const ip = req.headers['x-real-ip'] || req.socket.remoteAddress;
     const fromReader = () => keyOk(req.headers['x-square-key'], ingestKey);   // the ops scripts, with <data>/square-ingest.key
     try {
+      if (p === '/api/simli/session') {
+        if (!isLocalSimliRequest(req)) return json(res, 403, { error: 'Simli trials are only available in the local operator browser' });
+        if (req.method !== 'POST' && req.method !== 'DELETE') { res.setHeader('Allow', 'POST, DELETE'); return json(res, 405, { error: 'Use POST or DELETE for a Simli session' }); }
+        if (!simli) return json(res, 409, { error: 'The Simli avatar is not selected' });
+        if (!/^application\/json(?:\s*;|$)/i.test(req.headers['content-type'] || '')) return json(res, 415, { error: 'Send a JSON request' });
+        const body = await readBody(req, 1024);
+        if (!body || typeof body !== 'object' || Array.isArray(body)) return json(res, 400, { error: 'Send a JSON object' });
+        if (req.method === 'DELETE') return json(res, 200, simli.release(body.leaseId));
+        const controller = new AbortController(), cancel = () => { if (!res.writableEnded) controller.abort(); };
+        req.once('aborted', cancel); res.once('close', cancel);
+        try {
+          const session = await simli.create({ signal: controller.signal });
+          if (!res.destroyed) return json(res, 200, session);
+        } finally { req.off('aborted', cancel); res.off('close', cancel); }
+        return;
+      }
       if (p === '/api/state') {
         const snap = live.current();
         const headers = { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' };
@@ -643,7 +661,7 @@ export async function start(env = process.env) {
         square: square ? { configured: square.configured(), live: square.live, online: squareRoom.online, pv: squareRoom.pv, peak: squareRoom.peak } : null,
         radio: radio ? { wanted: radio.wanted(), on: radio.on, live: radio.live, answered: radio.answered, queue: radio.queue } : null,
         x: xClient ? { post: xClient.configured.user, read: xClient.configured.read, replies: !!xr } : null,
-        heart: !!heart, onAir: schedule.info(),
+        heart: !!heart, onAir: schedule.info(), ...(simli && isLocalSimliRequest(req, { requireOrigin: false }) ? { simli: simli.health() } : {}),
         voice: voice ? { model: voice.provider === 'doubao' ? doubaoResource(voice.voiceId) : VOICE.model, charsToday: voice.used, capChars: voice.dailyChars, ...(voice.provider === 'doubao' ? { rmbToday: +voice.rmb.toFixed(3) } : { usdToday: +voice.usd.toFixed(3) }) } : null,
         modelSpend: { calls: brain.spend.calls, fails: brain.spend.fails, usd: reply.costKnown ? +brain.spend.usd.toFixed(4) : null, costKnown: reply.costKnown, billing: reply.provider === 'codex' ? 'codex' : 'api' },
       }));
@@ -838,6 +856,7 @@ export async function start(env = process.env) {
       if (serveFile(res, path.join(ROOT, 'public'), rel, rel.startsWith('art/') && !rel.endsWith('.json') ? 'public, max-age=86400' : 'no-cache')) return;
       json(res, 404, { error: 'not found' });
     } catch (err) {
+      if (err instanceof SimliError) { if (!res.destroyed) return json(res, err.status, { error: err.message }); return; }
       if (err instanceof AuthError) return json(res, 400, { error: err.message });
       if (err.message === 'bad json') return json(res, 400, { error: '请求格式不对' });
       if (err.message === 'too large') return;
@@ -851,6 +870,7 @@ export async function start(env = process.env) {
   // Waits for the Vidu hangup to go out: Vidu bills by connected time, so exiting before it would leave her billing.
   const shutdown = async () => {
     world.save(); memory.save();
+    simli?.close();
     const brainStopped = brain.stop(), repliesClosed = reply.close();
     market?.stop(); live.stop(); square?.stop(); radio?.close().catch?.(() => {}); clearInterval(diaryTimer); clearInterval(saveTimer); clearInterval(scheduleTimer); server.close();
     await Promise.race([Promise.all([brainStopped, repliesClosed, relay?.stop(), avatar.close(), outbox?.flush()]).catch(() => {}), sleep(3000)]);

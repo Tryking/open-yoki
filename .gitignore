@@ -33,3 +33,6 @@ app/relay/sfx/*.mp3
 # Optional browser runtime and licensed Live2D models are installed locally.
 app/public/vendor/live2d/
 app/public/art/*/live2d/
+
+# Generated from the pinned Simli SDK by npm run build:simli.
+app/public/vendor/simli/
